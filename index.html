@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0; background:black; overflow:hidden;">
+
+<video id="player"></video>
+
+<style>
+#player {
+  position:fixed;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  opacity:1;
+  transition: opacity 0.8s ease-in-out; /* 🎬 TRANSIÇÃO SUAVE */
+}
+</style>
+
+<script>
+const player = document.getElementById("player");
+
+//////////////////////////////////////////////////
+// 📍 ZONAS - SÃO LEOPOLDO (MELHORADAS)
+//////////////////////////////////////////////////
+
+function getZona(lat, lon) {
+
+  // 📍 CENTRO
+  if (lat > -29.77 && lat < -29.75 && lon > -51.16 && lon < -51.14) {
+    return "centro";
+  }
+
+  // 📍 SCHALRAU
+  if (lat > -29.73 && lat < -29.71 && lon > -51.15 && lon < -51.13) {
+    return "scharlau";
+  }
+
+  // 📍 FEITORIA
+  if (lat > -29.75 && lat < -29.72 && lon > -51.12 && lon < -51.08) {
+    return "feitoria";
+  }
+
+  // 📍 PADRE REUS / CRISTO REI
+  if (lat > -29.76 && lat < -29.74 && lon > -51.14 && lon < -51.11) {
+    return "padrereus";
+  }
+
+  // 📍 CAMPINA / RIO DOS SINOS
+  if (lat > -29.79 && lat < -29.76 && lon > -51.18 && lon < -51.15) {
+    return "campina";
+  }
+
+  // 📍 PADRÃO
+  return "centro";
+}
+
+//////////////////////////////////////////////////
+// 🎬 ANÚNCIOS (EDITA AQUI 👇)
+//////////////////////////////////////////////////
+
+const anuncios = {
+
+  //////////////////////////////////////////////////
+  // 📍 CENTRO
+  //////////////////////////////////////////////////
+  centro: [
+    // 👉 COLOQUE ANÚNCIOS DO CENTRO
+    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297195/oficina_vrzqlz.mp4",
+    "video2.mp4",
+    "video3.mp4",
+    "video4.mp4",
+    "video5.mp4"
+  ],
+
+  //////////////////////////////////////////////////
+  // 📍 SCHALRAU
+  //////////////////////////////////////////////////
+  scharlau: [
+    // 👉 ANÚNCIOS DA SCHARLAU
+    "video6.mp4",
+    "video7.mp4",
+    "video8.mp4",
+    "video9.mp4",
+    "video10.mp4"
+  ],
+
+  //////////////////////////////////////////////////
+  // 📍 FEITORIA
+  //////////////////////////////////////////////////
+  feitoria: [
+    // 👉 ANÚNCIOS DA FEITORIA
+    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4",
+    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4",
+    "video13.mp4",
+    "video14.mp4",
+    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/petshop_tggjrw.mp4"
+  ],
+
+  //////////////////////////////////////////////////
+  // 📍 PADRE REUS / CRISTO REI
+  //////////////////////////////////////////////////
+  padrereus: [
+    // 👉 ANÚNCIOS DESSA REGIÃO
+    "video16.mp4",
+    "video17.mp4",
+    "video18.mp4",
+    "video19.mp4",
+    "video20.mp4"
+  ],
+
+  //////////////////////////////////////////////////
+  // 📍 CAMPINA / RIO DOS SINOS
+  //////////////////////////////////////////////////
+  campina: [
+    // 👉 PODE COLOCAR MAIS ANÚNCIOS AQUI
+    "video21.mp4",
+    "video22.mp4",
+    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/praia_x5rr9p.mp4",
+    "video24.mp4",
+    "video25.mp4"
+  ]
+
+};
+
+//////////////////////////////////////////////////
+// ▶️ PLAYER COM TRANSIÇÃO
+//////////////////////////////////////////////////
+
+let index = 0;
+let videos = [];
+
+function trocarVideo() {
+
+  // fade out
+  player.style.opacity = 0;
+
+  setTimeout(() => {
+    player.src = videos[index];
+    player.play();
+
+    // fade in
+    player.style.opacity = 1;
+  }, 800);
+}
+
+player.addEventListener("ended", () => {
+  index = (index + 1) % videos.length;
+  trocarVideo();
+});
+
+//////////////////////////////////////////////////
+// 📡 GEOLOCALIZAÇÃO + ATUALIZAÇÃO CONTÍNUA
+//////////////////////////////////////////////////
+
+function iniciarSistema() {
+
+  navigator.geolocation.watchPosition(function(position) {
+
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+
+    const zona = getZona(lat, lon);
+
+    console.log("ZONA:", zona);
+
+    const novosVideos = anuncios[zona];
+
+    // só troca se mudou de zona
+    if (JSON.stringify(novosVideos) !== JSON.stringify(videos)) {
+      videos = novosVideos;
+      index = 0;
+      trocarVideo();
+    }
+
+  }, function() {
+
+    // fallback
+    videos = anuncios["centro"];
+    trocarVideo();
+
+  });
+}
+
+iniciarSistema();
+
+</script>
+
+</body>
+</html>
