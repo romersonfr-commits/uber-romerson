@@ -19,65 +19,113 @@
 const player = document.getElementById("player");
 
 //////////////////////////////////////////////////
-// 📍 ZONAS
+// 📍 CONFIGURAÇÃO
 //////////////////////////////////////////////////
 
-function getZona(lat, lon) {
+const RAIO_PRIORIDADE_KM = 5; // 🔥 raio de prioridade (altere se quiser)
 
-  if (lat > -29.77 && lat < -29.75 && lon > -51.16 && lon < -51.14) {
-    return "centro";
+//////////////////////////////////////////////////
+// 📍 CLIENTES (CADASTRE AQUI)
+//////////////////////////////////////////////////
+
+const clientes = [
+
+  {
+    nome: "Oficina Centro",
+    lat: -29.754,   // 👉 COLOQUE A LATITUDE DO CLIENTE
+    lon: -51.149,   // 👉 COLOQUE A LONGITUDE DO CLIENTE
+    videos: [
+      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297195/oficina_vrzqlz.mp4"
+    ]
+  },
+
+  {
+    nome: "Hamburgueria Feitoria",
+    lat: -29.735,
+    lon: -51.095,
+    videos: [
+      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4"
+    ]
+  },
+
+  {
+    nome: "Pet Shop Feitoria",
+    lat: -29.736,
+    lon: -51.092,
+    videos: [
+      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/petshop_tggjrw.mp4"
+    ]
+  },
+
+  {
+    nome: "Churrascaria",
+    lat: -29.737,
+    lon: -51.093,
+    videos: [
+      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4"
+    ]
   }
 
-  if (lat > -29.73 && lat < -29.71 && lon > -51.15 && lon < -51.13) {
-    return "scharlau";
-  }
+];
 
-  if (lat > -29.75 && lat < -29.72 && lon > -51.12 && lon < -51.08) {
-    return "feitoria";
-  }
+//////////////////////////////////////////////////
+// 📏 FUNÇÃO DISTÂNCIA (HAVERSINE)
+//////////////////////////////////////////////////
 
-  if (lat > -29.76 && lat < -29.74 && lon > -51.14 && lon < -51.11) {
-    return "padrereus";
-  }
+function calcularDistancia(lat1, lon1, lat2, lon2) {
 
-  if (lat > -29.79 && lat < -29.76 && lon > -51.18 && lon < -51.15) {
-    return "campina";
-  }
+  const R = 6371; // raio da terra em km
 
-  return "centro";
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return R * c;
 }
 
 //////////////////////////////////////////////////
-// 🎬 ANÚNCIOS (⚠️ USE SÓ LINKS VÁLIDOS)
+// 🎯 SELEÇÃO INTELIGENTE DE ANÚNCIOS
 //////////////////////////////////////////////////
 
-const anuncios = {
+function selecionarVideos(lat, lon) {
 
-  centro: [
-    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297195/oficina_vrzqlz.mp4"
-  ],
+  let proximos = [];
+  let todos = [];
 
-  scharlau: [
-    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297195/oficina_vrzqlz.mp4"
-  ],
+  clientes.forEach(cliente => {
 
-  feitoria: [
-    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4",
-    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4",
-    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/petshop_tggjrw.mp4"
-  ],
+    const distancia = calcularDistancia(lat, lon, cliente.lat, cliente.lon);
 
-  padrereus: [
-    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297195/oficina_vrzqlz.mp4"
-  ],
+    // guarda todos (fallback)
+    todos.push(...cliente.videos);
 
-  campina: [
-    "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/praia_x5rr9p.mp4"
-  ]
-};
+    // prioridade
+    if (distancia <= RAIO_PRIORIDADE_KM) {
+      proximos.push(...cliente.videos);
+    }
+
+  });
+
+  // 🔥 PRIORIDADE
+  if (proximos.length > 0) {
+    console.log("📍 Mostrando clientes próximos");
+    return proximos;
+  }
+
+  // 🔄 FALLBACK
+  console.log("🌎 Nenhum próximo - mostrando todos");
+  return todos;
+}
 
 //////////////////////////////////////////////////
-// ▶️ PLAYER INTELIGENTE
+// ▶️ PLAYER
 //////////////////////////////////////////////////
 
 let index = 0;
@@ -94,7 +142,7 @@ function tocarVideo() {
     player.src = videos[index];
 
     player.play().catch(() => {
-      console.log("Erro ao reproduzir, pulando...");
+      console.log("Erro ao reproduzir");
       proximoVideo();
     });
 
@@ -109,12 +157,7 @@ function proximoVideo() {
 }
 
 player.addEventListener("ended", proximoVideo);
-
-// 👉 NOVO: se der erro no vídeo, pula
-player.addEventListener("error", () => {
-  console.log("Erro no vídeo, pulando...");
-  proximoVideo();
-});
+player.addEventListener("error", proximoVideo);
 
 //////////////////////////////////////////////////
 // 📡 GEOLOCALIZAÇÃO
@@ -127,11 +170,9 @@ function iniciarSistema() {
     const lat = position.coords.latitude;
     const lon = position.coords.longitude;
 
-    const zona = getZona(lat, lon);
+    console.log("📡 Localização:", lat, lon);
 
-    console.log("ZONA:", zona);
-
-    const novosVideos = anuncios[zona];
+    const novosVideos = selecionarVideos(lat, lon);
 
     if (JSON.stringify(novosVideos) !== JSON.stringify(videos)) {
       videos = novosVideos;
@@ -141,9 +182,15 @@ function iniciarSistema() {
 
   }, function() {
 
-    videos = anuncios["centro"];
+    console.log("⚠️ Sem GPS - fallback geral");
+
+    videos = clientes.flatMap(c => c.videos);
     tocarVideo();
 
+  }, {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 5000
   });
 }
 
