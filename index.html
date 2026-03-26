@@ -2,255 +2,35 @@
 <html>
 <body style="margin:0; background:black; overflow:hidden;">
 
-<video id="player" muted autoplay playsinline></video>
-
-<style>
-#player {
-  position:fixed;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  opacity:1;
-  transition: opacity 0.8s ease-in-out;
-}
-</style>
+<video id="player" autoplay muted playsinline></video>
 
 <script>
-const player = document.getElementById("player");
-
-//////////////////////////////////////////////////
-// 📍 CONFIGURAÇÃO
-//////////////////////////////////////////////////
-
-const RAIO_PRIORIDADE_KM = 5; // 🔥 raio de prioridade (altere se quiser)
-
-//////////////////////////////////////////////////
-// 📍 CLIENTES (CADASTRE AQUI)
-//////////////////////////////////////////////////
-
-const clientes = [
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-  
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  {
-    nome: "Oficina Centro",
-    lat: -29.754,   // 👉 COLOQUE A LATITUDE DO CLIENTE
-    lon: -51.149,   // 👉 COLOQUE A LONGITUDE DO CLIENTE
-    videos: [
-      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297195/oficina_vrzqlz.mp4"
-    ]
-  },
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-  
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  {
-    nome: "Hamburgueria Feitoria",
-    lat: -29.735,
-    lon: -51.095,
-    videos: [
-      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4"
-    ]
-  },
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  
-////////////////////////////////////////////////////////////////////////////////////////////////////
-  
-   ///////////////////////////////////////////////////////////////////////////////////////////////
-  {
-    nome: "Bee",
-    lat: -29.735,
-    lon: -51.095,
-    videos: [
-      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774469808/Design_sem_nome_2_iepilw.mp4"
-    ]
-  },
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-  
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  {
-    nome: "Pet Shop Feitoria",
-    lat: -29.736,
-    lon: -51.092,
-    videos: [
-      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/petshop_tggjrw.mp4"
-    ]
-  },
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  
-///////////////////////////////////////////////////////////////////////////////////////////////////
-  
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  {
-    nome: "anuncie aqui",
-    lat: -29.736,
-    lon: -51.092,
-    videos: [
-      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774378096/Design_sem_nome_osvmoo.mp4"
-    ]
-  },
-  //////////////////////////////////////////////////////////////////////////////////////////////
-  
-//////////////////////////////////////////////////////////////////////////////////////////////////
-  
-  //////////////////////////////////////////////////////////////////////////////////////////////
- {
-    nome: "anuncie aqui",
-    lat: -29.736,
-    lon: -51.092,
-    videos: [
-      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774379953/Design_sem_nome_1_vdkqmd.mp4"
-    ]
-  },
-  /////////////////////////////////////////////////////////////////////////////////////////////
-  
-//////////////////////////////////////////////////////////////////////////////////////////////////  
-  
-  /////////////////////////////////////////////////////////////////////////////////////////////
-  {
-    nome: "Churrascaria",
-    lat: -29.752517,
-    lon: -51.090425,
-    videos: [
-      "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4"
-    ]
-  }
-  /////////////////////////////////////////////////////////////////////////////////////////////
-  
-//////////////////////////////////////////////////////////////////////////////////////////////////
+const videos = [
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4",
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774378096/Design_sem_nome_osvmoo.mp4",
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4"
 ];
 
-//////////////////////////////////////////////////
-// 📏 FUNÇÃO DISTÂNCIA (HAVERSINE)
-//////////////////////////////////////////////////
-
-function calcularDistancia(lat1, lon1, lat2, lon2) {
-
-  const R = 6371; // raio da terra em km
-
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-
-  const a =
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-  return R * c;
-}
-
-//////////////////////////////////////////////////
-// 🎯 SELEÇÃO INTELIGENTE DE ANÚNCIOS
-//////////////////////////////////////////////////
-
-function selecionarVideos(lat, lon) {
-
-  let proximos = [];
-  let todos = [];
-
-  clientes.forEach(cliente => {
-
-    const distancia = calcularDistancia(lat, lon, cliente.lat, cliente.lon);
-
-    // guarda todos (fallback)
-    todos.push(...cliente.videos);
-
-    // prioridade
-    if (distancia <= RAIO_PRIORIDADE_KM) {
-      proximos.push(...cliente.videos);
-    }
-
-  });
-
-  // 🔥 PRIORIDADE
-  if (proximos.length > 0) {
-    console.log("📍 Mostrando clientes próximos");
-    return proximos;
-  }
-
-  // 🔄 FALLBACK
-  console.log("🌎 Nenhum próximo - mostrando todos");
-  return todos;
-}
-
-//////////////////////////////////////////////////
-// ▶️ PLAYER
-//////////////////////////////////////////////////
-
 let index = 0;
-let videos = [];
+const player = document.getElementById("player");
 
-function tocarVideo() {
-
-  if (!videos.length) return;
-
+function trocarVideo() {
   player.style.opacity = 0;
 
   setTimeout(() => {
-
     player.src = videos[index];
-
-    player.play().catch(() => {
-      console.log("Erro ao reproduzir");
-      proximoVideo();
-    });
+    player.play();
 
     player.style.opacity = 1;
 
-  }, 800);
+    index = (index + 1) % videos.length;
+  }, 500);
 }
 
-function proximoVideo() {
-  index = (index + 1) % videos.length;
-  tocarVideo();
-}
+player.style = "width:100%; height:100%; object-fit:cover; transition:0.5s";
 
-player.addEventListener("ended", proximoVideo);
-player.addEventListener("error", proximoVideo);
-
-//////////////////////////////////////////////////
-// 📡 GEOLOCALIZAÇÃO
-//////////////////////////////////////////////////
-
-function iniciarSistema() {
-
-  navigator.geolocation.watchPosition(function(position) {
-
-    const lat = position.coords.latitude;
-    const lon = position.coords.longitude;
-
-    console.log("📡 Localização:", lat, lon);
-
-    const novosVideos = selecionarVideos(lat, lon);
-
-    if (JSON.stringify(novosVideos) !== JSON.stringify(videos)) {
-      videos = novosVideos;
-      index = 0;
-      tocarVideo();
-    }
-
-  }, function() {
-
-    console.log("⚠️ Sem GPS - fallback geral");
-
-    videos = clientes.flatMap(c => c.videos);
-    tocarVideo();
-
-  }, {
-    enableHighAccuracy: true,
-    maximumAge: 0,
-    timeout: 5000
-  });
-}
-
-iniciarSistema();
-
+trocarVideo();
+setInterval(trocarVideo, 10000);
 </script>
 
 </body>
