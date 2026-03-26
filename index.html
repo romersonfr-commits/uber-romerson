@@ -1,4 +1,174 @@
-<!DOCTYPE html>
+<!DOC<!DOCTYPE html>
+<html>
+<body style="margin:0; background:black; overflow:hidden; font-family:Arial; color:white;">
+
+<!-- BARRA SUPERIOR -->
+<div id="topbar">
+  <div>📍 São Leopoldo</div>
+  <div id="clima">Carregando...</div>
+  <div id="hora"></div>
+</div>
+
+<!-- PLAYER DE VÍDEO -->
+<video id="player" autoplay muted playsinline></video>
+
+<!-- TELA INSTITUCIONAL -->
+<div id="tela-info">
+  <h1>Anuncie aqui</h1>
+  <p>Coloque sua marca em movimento</p>
+  <p>📲 Fale agora: (51) 98017-1851</p>
+</div>
+
+<!-- QR CODE -->
+<img id="qr" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://wa.me/5551980171851">
+
+<style>
+#topbar {
+  position:fixed;
+  top:0;
+  width:100%;
+  padding:10px;
+  display:flex;
+  justify-content:space-between;
+  background:rgba(0,0,0,0.6);
+  z-index:10;
+}
+
+#player {
+  position:fixed;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+#tela-info {
+  position:fixed;
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  background:black;
+  text-align:center;
+  opacity:0;
+  transition:0.5s;
+}
+
+#qr {
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:120px;
+}
+</style>
+
+<script>
+// =====================
+// CONFIGURAÇÃO
+// =====================
+
+const anuncios = [
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4",
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774378096/Design_sem_nome_osvmoo.mp4",
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4"
+];
+
+// sequência: anuncio, anuncio, clima, anuncio, institucional
+const sequencia = [
+  "video",
+  "video",
+  "clima",
+  "video",
+  "institucional"
+];
+
+let indexVideo = 0;
+let indexSeq = 0;
+
+const player = document.getElementById("player");
+const telaInfo = document.getElementById("tela-info");
+
+// =====================
+// PLAYER
+// =====================
+
+function mostrarVideo() {
+  telaInfo.style.opacity = 0;
+  player.style.display = "block";
+
+  player.src = anuncios[indexVideo];
+  player.play();
+
+  indexVideo = (indexVideo + 1) % anuncios.length;
+}
+
+// =====================
+// TELA INSTITUCIONAL
+// =====================
+
+function mostrarInstitucional() {
+  player.style.display = "none";
+  telaInfo.style.opacity = 1;
+}
+
+// =====================
+// CLIMA
+// =====================
+
+async function atualizarClima() {
+  try {
+    const resp = await fetch("https://wttr.in/SaoLeopoldo?format=3");
+    const txt = await resp.text();
+    document.getElementById("clima").innerText = txt;
+  } catch {
+    document.getElementById("clima").innerText = "Erro clima";
+  }
+}
+setInterval(atualizarClima, 600000);
+atualizarClima();
+
+// =====================
+// RELÓGIO
+// =====================
+
+function atualizarHora() {
+  const agora = new Date();
+  document.getElementById("hora").innerText =
+    agora.toLocaleTimeString();
+}
+setInterval(atualizarHora, 1000);
+atualizarHora();
+
+// =====================
+// LOOP PRINCIPAL
+// =====================
+
+function loop() {
+  const tipo = sequencia[indexSeq];
+
+  if (tipo === "video") {
+    mostrarVideo();
+  }
+
+  if (tipo === "institucional") {
+    mostrarInstitucional();
+  }
+
+  if (tipo === "clima") {
+    mostrarInstitucional();
+  }
+
+  indexSeq = (indexSeq + 1) % sequencia.length;
+}
+
+loop();
+setInterval(loop, 10000);
+
+</script>
+
+</body>
+</html>TYPE html>
 <html>
 <body style="margin:0; background:black; overflow:hidden;">
 
