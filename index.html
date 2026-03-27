@@ -2,23 +2,14 @@
 <html lang="pt-BR">
 <head>
 
-<!-- =====================================================
-📱 CONFIGURAÇÕES BÁSICAS
-===================================================== -->
-
 <meta charset="UTF-8">
-
-<!-- IMPORTANTE: garante que funcione corretamente em tablets -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Bee DOOH Player</title>
 
 <style>
 
-/* =====================================================
-🎨 RESET TOTAL DA TELA (REMOVE ESPAÇOS BRANCOS)
-===================================================== */
-
+/* RESET */
 html, body {
   margin:0;
   padding:0;
@@ -26,70 +17,37 @@ html, body {
   height:100vh;
   background:black;
   overflow:hidden;
-  font-family:Arial, sans-serif;
+  font-family:Arial;
 }
 
-/* =====================================================
-🎬 PLAYER DE VÍDEO (TELA CHEIA)
-===================================================== */
-
+/* VÍDEO */
 #player {
   position:fixed;
   top:0;
   left:0;
   width:100vw;
   height:100vh;
-
-  /* ESSENCIAL: preenche a tela sem distorcer */
   object-fit:cover;
-
   background:black;
   z-index:1;
 }
 
-/* =====================================================
-⚠️ MENSAGEM DE ERRO (SE VÍDEO FALHAR)
-===================================================== */
-
-#erro {
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%, -50%);
-  color:#ff4444;
-  font-size:30px;
-  text-align:center;
-  z-index:20;
-
-  /* começa escondido */
-  display:none;
-}
-
-/* =====================================================
-📺 BARRA SUPERIOR (INFO + MARCA)
-===================================================== */
-
+/* BARRA SUPERIOR */
 #topbar {
   position:fixed;
   top:0;
   left:0;
   width:100%;
-
-  /* ALTERAR AQUI SE QUISER MAIOR OU MENOR */
   height:100px;
-
   background:rgba(0,0,0,0.75);
   color:white;
-
   display:flex;
   align-items:center;
-
   padding:0 25px;
-
   z-index:10;
 }
 
-/* LOGO / NOME */
+/* LOGO */
 #logo {
   font-size:28px;
   color:#FFD700;
@@ -97,26 +55,20 @@ html, body {
   font-weight:bold;
 }
 
-/* ÁREA DO TEXTO ROLANDO */
+/* TEXTO ROLANDO */
 #marquee {
   flex:1;
   overflow:hidden;
   white-space:nowrap;
 }
 
-/* TEXTO ANIMADO */
 #marquee span {
   display:inline-block;
   padding-left:100%;
-
-  /* VELOCIDADE DA ANIMAÇÃO */
   animation:scroll 18s linear infinite;
-
-  /* TAMANHO DO TEXTO (PODE AUMENTAR AQUI) */
   font-size:28px;
 }
 
-/* ANIMAÇÃO DE ROLAGEM */
 @keyframes scroll {
   from { transform:translateX(0); }
   to { transform:translateX(-100%); }
@@ -127,139 +79,105 @@ html, body {
 
 <body>
 
-<!-- =====================================================
-📺 BARRA SUPERIOR
-===================================================== -->
-
+<!-- BARRA -->
 <div id="topbar">
-
-  <!-- NOME DA EMPRESA (PODE ALTERAR AQUI) -->
   <div id="logo">Bee Geomarketing</div>
-
-  <!-- TEXTO DINÂMICO -->
   <div id="marquee">
-    <span id="info">Carregando sistema...</span>
+    <span id="info">Carregando...</span>
   </div>
-
 </div>
 
-<!-- =====================================================
-⚠️ MENSAGEM DE ERRO
-===================================================== -->
-
-<div id="erro">⚠️ Erro ao carregar vídeos</div>
-
-<!-- =====================================================
-🎬 PLAYER DE VÍDEO
-===================================================== -->
-
-<video id="player"
-  muted
-  playsinline
-  webkit-playsinline
-  preload="auto">
-</video>
+<!-- VÍDEO -->
+<video id="player" muted playsinline></video>
 
 <script>
 
 /* =====================================================
-🎬 CONFIGURAÇÃO DOS VÍDEOS (CLOUDINARY)
+🎬 VÍDEOS (CLOUDINARY)
 ===================================================== */
 
-/*
-⚠️ MUITO IMPORTANTE:
-
-✔ O link DEVE terminar em .mp4
-✔ Deve conter: /video/upload/
-✔ Recomenda-se: f_mp4
-
-EXEMPLO CORRETO:
-
-https://res.cloudinary.com/SEU_CLOUD/video/upload/f_mp4/v123456/video.mp4
-*/
-
 const videos = [
-
-  // 🔧 SUBSTITUA PELOS SEUS LINKS CORRETOS:
-
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774379953/Design_sem_nome_1_vdkqmd.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774297195/oficina_vrzqlz.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774378096/Design_sem_nome_osvmoo.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774297193/hamburgueria_hdbmki.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774297193/churrasco_ya02cz.mp4"
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774378896/Design_sem_nome_osvmoo.mp4"
 ];
 
 /* =====================================================
-🎯 CONTROLE DA PLAYLIST
+🎯 PLAYER
 ===================================================== */
 
 let index = 0;
-
 const player = document.getElementById("player");
-const erro = document.getElementById("erro");
-
-/* =====================================================
-🚀 FUNÇÃO PARA CARREGAR VÍDEO
-===================================================== */
 
 function carregarVideo(){
 
-  // esconde erro
-  erro.style.display = "none";
+  let src = videos[index];
 
-  let source = videos[index];
-
-  console.log("▶️ Tentando:", source);
-
-  // limpa player (evita bug Android)
   player.pause();
   player.removeAttribute("src");
   player.load();
 
-  // pequeno delay para estabilidade
   setTimeout(() => {
-
-    player.src = source;
-
-    // quando estiver pronto
-    player.oncanplay = () => {
-      player.play().catch(() => {});
-    };
-
+    player.src = src;
+    player.play().catch(()=>{});
   }, 300);
 }
 
-/* =====================================================
-🔁 EVENTOS DO PLAYER
-===================================================== */
-
-// quando termina o vídeo
 player.onended = () => {
   index = (index + 1) % videos.length;
   carregarVideo();
 };
 
-// se der erro
 player.onerror = () => {
-
-  console.log("❌ erro no vídeo:", videos[index]);
-
-  erro.style.display = "block";
-
-  // pula pro próximo
   index = (index + 1) % videos.length;
-
   setTimeout(carregarVideo, 2000);
 };
-
-/* =====================================================
-▶️ INICIAR PLAYER
-===================================================== */
 
 carregarVideo();
 
 /* =====================================================
-⏰ INFORMAÇÕES NA BARRA (HORA + WHATSAPP)
+🌦️ CLIMA (OPEN-METEO - GRÁTIS)
+===================================================== */
+
+/*
+📍 São Leopoldo:
+Latitude: -29.76
+Longitude: -51.15
+
+👉 Pode alterar para qualquer cidade depois
+*/
+
+let temperatura = "--";
+let climaIcone = "☀️";
+
+function buscarClima(){
+
+  fetch("https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&current_weather=true")
+    .then(res => res.json())
+    .then(data => {
+
+      temperatura = Math.round(data.current_weather.temperature);
+
+      let code = data.current_weather.weathercode;
+
+      // Tradução simples do clima
+      if(code === 0) climaIcone = "☀️";
+      else if(code <= 3) climaIcone = "⛅";
+      else if(code <= 48) climaIcone = "☁️";
+      else if(code <= 67) climaIcone = "🌧️";
+      else if(code <= 77) climaIcone = "🌨️";
+      else climaIcone = "🌩️";
+
+    })
+    .catch(() => {
+      console.log("Erro ao buscar clima");
+    });
+}
+
+/* busca clima a cada 10 minutos */
+buscarClima();
+setInterval(buscarClima, 600000);
+
+/* =====================================================
+⏰ TEXTO DA BARRA
 ===================================================== */
 
 function atualizarInfo(){
@@ -267,20 +185,12 @@ function atualizarInfo(){
   let hora = new Date().toLocaleTimeString("pt-BR");
 
   document.getElementById("info").innerText =
-    `São Leopoldo • ${hora} • Anuncie aqui Whatsapp (51) 9 8017-1851`;
+    `São Leopoldo • ${temperatura}°C ${climaIcone} • ${hora} • Anuncie aqui (51) 9 8017 1851`;
 }
 
 /* atualiza a cada 5 segundos */
 setInterval(atualizarInfo, 5000);
 atualizarInfo();
-
-/* =====================================================
-🔒 GARANTIR AUTOPLAY (ANDROID / TABLET)
-===================================================== */
-
-document.body.addEventListener("click", () => {
-  player.play().catch(() => {});
-});
 
 </script>
 
