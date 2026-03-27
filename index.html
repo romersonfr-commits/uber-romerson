@@ -12,7 +12,6 @@ body {
   font-family:Arial, sans-serif;
 }
 
-/* 🎬 VÍDEO */
 #player {
   position:fixed;
   width:100%;
@@ -21,7 +20,6 @@ body {
   transition: opacity 0.8s;
 }
 
-/* 📺 BARRA SUPERIOR */
 #topbar {
   position:fixed;
   top:0;
@@ -31,22 +29,19 @@ body {
   color:white;
   display:flex;
   align-items:center;
-  justify-content:space-between;
   padding:0 15px;
   font-size:18px;
   z-index:10;
 }
 
-/* LOGO */
 #logo {
   font-weight:bold;
   color:#FFD700;
+  margin-right:20px;
 }
 
-/* TEXTO ROLANDO */
 #marquee {
-  position:absolute;
-  width:100%;
+  flex:1;
   white-space:nowrap;
   overflow:hidden;
 }
@@ -61,43 +56,28 @@ body {
   from { transform:translateX(0); }
   to { transform:translateX(-100%); }
 }
-
-/* QR CODE */
-#qr {
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:100px;
-  opacity:0.8;
-}
 </style>
 </head>
 
 <body>
 
-<!-- 📺 BARRA -->
 <div id="topbar">
   <div id="logo">Bee Geomarketing</div>
-  <div id="marquee"><span id="info">Carregando...</span></div>
+  <div id="marquee"><span id="info">Iniciando sistema...</span></div>
 </div>
 
-<!-- 🎬 PLAYER -->
 <video id="player" muted autoplay playsinline></video>
-
-<!-- QR CODE -->
-<img id="qr" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://wa.me/5551980171851" />
 
 <script>
 const player = document.getElementById("player");
 
 //////////////////////////////////////////////////
-// 🎬 PLAYLIST DE VÍDEOS
+// 🎬 VÍDEOS
 //////////////////////////////////////////////////
 
 const videos = [
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774378096/Design_sem_nome_osvmoo.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4"
+  "video1.mp4",
+  "video2.mp4"
 ];
 
 let index = 0;
@@ -118,36 +98,61 @@ player.addEventListener("ended", playNext);
 playNext();
 
 //////////////////////////////////////////////////
-// ⏰ HORA + 📍 LOCAL + 🌤️ CLIMA
+// 📺 INFO (COM FALLBACK)
 //////////////////////////////////////////////////
 
 async function atualizarInfo(){
 
   let hora = new Date().toLocaleTimeString("pt-BR");
 
-  // 📍 LOCALIZAÇÃO
-  navigator.geolocation.getCurrentPosition(async pos => {
+  // TEXTO PADRÃO (caso tudo falhe)
+  let texto = `São Leopoldo • ${hora} • Carregando clima...`;
 
-    let lat = pos.coords.latitude;
-    let lon = pos.coords.longitude;
+  try {
 
-    // cidade/bairro (OpenStreetMap)
-    let geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
-    let geoData = await geo.json();
+    navigator.geolocation.getCurrentPosition(async pos => {
 
-    let bairro = geoData.address.suburb || geoData.address.neighbourhood || geoData.address.city;
+      let lat = pos.coords.latitude;
+      let lon = pos.coords.longitude;
 
-    // 🌤️ CLIMA (Open-Meteo - grátis)
-    let climaReq = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-    let climaData = await climaReq.json();
+      // 🌤️ clima
+      let climaReq = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+      let climaData = await climaReq.json();
 
-    let temp = Math.round(climaData.current_weather.temperature);
-    let emoji = "☀️";
+      let temp = Math.round(climaData.current_weather.temperature);
 
-    document.getElementById("info").innerText =
-      `${bairro} • ${hora} • ${temp}°C ${emoji} • Anuncie aqui`;
+      texto = `Sua região • ${hora} • ${temp}°C ☀️ • Anuncie aqui`;
 
-  });
+      document.getElementById("info").innerText = texto;
+
+    }, () => {
+      // 🚫 sem localização → usa fallback fixo
+      climaFallback();
+    });
+
+  } catch {
+    climaFallback();
+  }
+
+  // fallback fixo
+  async function climaFallback(){
+    try{
+      let climaReq = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&current_weather=true`);
+      let climaData = await climaReq.json();
+
+      let temp = Math.round(climaData.current_weather.temperature);
+
+      texto = `São Leopoldo • ${hora} • ${temp}°C ☀️ • Anuncie aqui`;
+
+    } catch {
+      texto = `São Leopoldo • ${hora} • Anuncie aqui`;
+    }
+
+    document.getElementById("info").innerText = texto;
+  }
+
+  // mostra algo imediatamente
+  document.getElementById("info").innerText = texto;
 
 }
 
