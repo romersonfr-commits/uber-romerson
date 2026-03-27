@@ -1,12 +1,24 @@
 <!DOCTYPE html>
-<html lang<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
+<!-- =====================================================
+📱 CONFIGURAÇÕES BÁSICAS
+===================================================== -->
+
 <meta charset="UTF-8">
+
+<!-- IMPORTANTE: garante que funcione corretamente em tablets -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Bee DOOH Player</title>
 
 <style>
+
+/* =====================================================
+🎨 RESET TOTAL DA TELA (REMOVE ESPAÇOS BRANCOS)
+===================================================== */
+
 html, body {
   margin:0;
   padding:0;
@@ -17,207 +29,67 @@ html, body {
   font-family:Arial, sans-serif;
 }
 
+/* =====================================================
+🎬 PLAYER DE VÍDEO (TELA CHEIA)
+===================================================== */
+
 #player {
   position:fixed;
   top:0;
   left:0;
   width:100vw;
   height:100vh;
+
+  /* ESSENCIAL: preenche a tela sem distorcer */
   object-fit:cover;
+
   background:black;
   z-index:1;
 }
 
-#erro {
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%, -50%);
-  color:red;
-  font-size:28px;
-  z-index:20;
-  display:none;
-}
+/* =====================================================
+⚠️ MENSAGEM DE ERRO (SE VÍDEO FALHAR)
+===================================================== */
 
-#topbar {
-  position:fixed;
-  top:0;
-  width:100%;
-  height:100px;
-  background:rgba(0,0,0,0.75);
-  color:white;
-  display:flex;
-  align-items:center;
-  padding:0 25px;
-  z-index:10;
-}
-
-#logo {
-  font-size:28px;
-  color:#FFD700;
-  margin-right:30px;
-  font-weight:bold;
-}
-
-#marquee {
-  flex:1;
-  overflow:hidden;
-  white-space:nowrap;
-}
-
-#marquee span {
-  display:inline-block;
-  padding-left:100%;
-  animation:scroll 18s linear infinite;
-  font-size:28px;
-}
-
-@keyframes scroll {
-  from { transform:translateX(0); }
-  to { transform:translateX(-100%); }
-}
-</style>
-</head>
-
-<body>
-
-<div id="topbar">
-  <div id="logo">Bee Geomarketing</div>
-  <div id="marquee">
-    <span id="info">Carregando sistema...</span>
-  </div>
-</div>
-
-<div id="erro">⚠️ Erro ao carregar vídeos</div>
-
-<video id="player" muted playsinline webkit-playsinline preload="auto"></video>
-
-<script>
-const player = document.getElementById("player");
-const erro = document.getElementById("erro");
-
-//////////////////////////////////////////////////
-// 🔥 COLE AQUI SEUS LINKS DO CLOUDINARY
-//////////////////////////////////////////////////
-
-const videos = [
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774379953/Design_sem_nome_1_vdkqmd.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297195/oficina_vrzqlz.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774378096/Design_sem_nome_osvmoo.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4"
-];
-
-let index = 0;
-
-function carregarVideo(){
-
-  erro.style.display = "none";
-
-  let source = videos[index];
-
-  console.log("▶️ Tocando:", source);
-
-  player.pause();
-  player.src = "";
-  player.load();
-
-  setTimeout(() => {
-
-    player.src = source;
-
-    player.oncanplay = () => {
-      player.play().catch(() => {});
-    };
-
-  }, 300);
-}
-
-player.onerror = () => {
-  console.log("❌ erro:", videos[index]);
-  erro.style.display = "block";
-
-  index = (index + 1) % videos.length;
-  setTimeout(carregarVideo, 2000);
-};
-
-player.onended = () => {
-  index = (index + 1) % videos.length;
-  carregarVideo();
-};
-
-carregarVideo();
-
-//////////////////////////////////////////////////
-// INFO
-//////////////////////////////////////////////////
-
-setInterval(() => {
-  let hora = new Date().toLocaleTimeString("pt-BR");
-  document.getElementById("info").innerText =
-    `São Leopoldo • ${hora} • Anuncie aqui (51) 9 8017 1851`;
-}, 5000);
-
-</script>
-
-</body>
-</html>="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bee DOOH Player</title>
-
-<style>
-html, body {
-  margin:0;
-  padding:0;
-  width:100vw;
-  height:100vh;
-  background:black;
-  overflow:hidden;
-  font-family:Arial, sans-serif;
-}
-
-/* 🎬 VÍDEO */
-#player {
-  position:fixed;
-  top:0;
-  left:0;
-  width:100vw;
-  height:100vh;
-  object-fit:cover;
-  background:black;
-  z-index:1;
-}
-
-/* ⚠️ ERRO VISUAL */
 #erro {
   position:fixed;
   top:50%;
   left:50%;
   transform:translate(-50%, -50%);
   color:#ff4444;
-  font-size:28px;
+  font-size:30px;
   text-align:center;
   z-index:20;
+
+  /* começa escondido */
   display:none;
 }
 
-/* 📺 BARRA SUPERIOR */
+/* =====================================================
+📺 BARRA SUPERIOR (INFO + MARCA)
+===================================================== */
+
 #topbar {
   position:fixed;
   top:0;
   left:0;
   width:100%;
+
+  /* ALTERAR AQUI SE QUISER MAIOR OU MENOR */
   height:100px;
+
   background:rgba(0,0,0,0.75);
   color:white;
+
   display:flex;
   align-items:center;
+
   padding:0 25px;
+
   z-index:10;
 }
 
+/* LOGO / NOME */
 #logo {
   font-size:28px;
   color:#FFD700;
@@ -225,102 +97,152 @@ html, body {
   font-weight:bold;
 }
 
-/* TEXTO ROLANDO */
+/* ÁREA DO TEXTO ROLANDO */
 #marquee {
   flex:1;
   overflow:hidden;
   white-space:nowrap;
 }
 
+/* TEXTO ANIMADO */
 #marquee span {
   display:inline-block;
   padding-left:100%;
+
+  /* VELOCIDADE DA ANIMAÇÃO */
   animation:scroll 18s linear infinite;
+
+  /* TAMANHO DO TEXTO (PODE AUMENTAR AQUI) */
   font-size:28px;
 }
 
+/* ANIMAÇÃO DE ROLAGEM */
 @keyframes scroll {
   from { transform:translateX(0); }
   to { transform:translateX(-100%); }
 }
+
 </style>
 </head>
 
 <body>
 
-<!-- 📺 BARRA -->
+<!-- =====================================================
+📺 BARRA SUPERIOR
+===================================================== -->
+
 <div id="topbar">
+
+  <!-- NOME DA EMPRESA (PODE ALTERAR AQUI) -->
   <div id="logo">Bee Geomarketing</div>
+
+  <!-- TEXTO DINÂMICO -->
   <div id="marquee">
     <span id="info">Carregando sistema...</span>
   </div>
+
 </div>
 
-<!-- ⚠️ ERRO -->
-<div id="erro">⚠️ Verifique os vídeos</div>
+<!-- =====================================================
+⚠️ MENSAGEM DE ERRO
+===================================================== -->
 
-<!-- 🎬 PLAYER -->
-<video id="player" muted playsinline webkit-playsinline preload="auto"></video>
+<div id="erro">⚠️ Erro ao carregar vídeos</div>
+
+<!-- =====================================================
+🎬 PLAYER DE VÍDEO
+===================================================== -->
+
+<video id="player"
+  muted
+  playsinline
+  webkit-playsinline
+  preload="auto">
+</video>
 
 <script>
-const player = document.getElementById("player");
-const erro = document.getElementById("erro");
 
-//////////////////////////////////////////////////
-// 🔥 CONFIGURE AQUI SEUS VÍDEOS
-//////////////////////////////////////////////////
+/* =====================================================
+🎬 CONFIGURAÇÃO DOS VÍDEOS (CLOUDINARY)
+===================================================== */
+
+/*
+⚠️ MUITO IMPORTANTE:
+
+✔ O link DEVE terminar em .mp4
+✔ Deve conter: /video/upload/
+✔ Recomenda-se: f_mp4
+
+EXEMPLO CORRETO:
+
+https://res.cloudinary.com/SEU_CLOUD/video/upload/f_mp4/v123456/video.mp4
+*/
 
 const videos = [
-  // ESCOLHA UMA OPÇÃO:
 
-  // 👉 LOCAL (tablet)
-  //"file:///storage/emulated/0/Download/video1.mp4",
+  // 🔧 SUBSTITUA PELOS SEUS LINKS CORRETOS:
 
-  // 👉 MESMA PASTA DO HTML
-  "./video1.mp4",
-  "./video2.mp4",
-
-  // 👉 ONLINE (recomendado futuramente)
-  //"https://seusite.com/video1.mp4"
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774379953/Design_sem_nome_1_vdkqmd.mp4",
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774297195/oficina_vrzqlz.mp4",
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774378096/Design_sem_nome_osvmoo.mp4",
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774297193/hamburgueria_hdbmki.mp4",
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774297193/churrasco_ya02cz.mp4"
 ];
+
+/* =====================================================
+🎯 CONTROLE DA PLAYLIST
+===================================================== */
 
 let index = 0;
 
+const player = document.getElementById("player");
+const erro = document.getElementById("erro");
+
+/* =====================================================
+🚀 FUNÇÃO PARA CARREGAR VÍDEO
+===================================================== */
+
 function carregarVideo(){
 
+  // esconde erro
   erro.style.display = "none";
 
   let source = videos[index];
 
   console.log("▶️ Tentando:", source);
 
+  // limpa player (evita bug Android)
   player.pause();
   player.removeAttribute("src");
   player.load();
 
+  // pequeno delay para estabilidade
   setTimeout(() => {
 
     player.src = source;
 
+    // quando estiver pronto
     player.oncanplay = () => {
-      console.log("✅ Vídeo carregado");
       player.play().catch(() => {});
     };
 
   }, 300);
 }
 
-//////////////////////////////////////////////////
-// EVENTOS
-//////////////////////////////////////////////////
+/* =====================================================
+🔁 EVENTOS DO PLAYER
+===================================================== */
 
+// quando termina o vídeo
 player.onended = () => {
   index = (index + 1) % videos.length;
   carregarVideo();
 };
 
+// se der erro
 player.onerror = () => {
-  console.log("❌ ERRO no vídeo:", videos[index]);
+
+  console.log("❌ erro no vídeo:", videos[index]);
 
   erro.style.display = "block";
 
@@ -330,29 +252,31 @@ player.onerror = () => {
   setTimeout(carregarVideo, 2000);
 };
 
-//////////////////////////////////////////////////
-// INICIAR
-//////////////////////////////////////////////////
+/* =====================================================
+▶️ INICIAR PLAYER
+===================================================== */
 
 carregarVideo();
 
-//////////////////////////////////////////////////
-// ⏰ INFO + WHATS
-//////////////////////////////////////////////////
+/* =====================================================
+⏰ INFORMAÇÕES NA BARRA (HORA + WHATSAPP)
+===================================================== */
 
 function atualizarInfo(){
+
   let hora = new Date().toLocaleTimeString("pt-BR");
 
   document.getElementById("info").innerText =
     `São Leopoldo • ${hora} • Anuncie aqui (51) 9 8017 1851`;
 }
 
+/* atualiza a cada 5 segundos */
 setInterval(atualizarInfo, 5000);
 atualizarInfo();
 
-//////////////////////////////////////////////////
-// 🔒 FORÇA AUTOPLAY (ANDROID)
-//////////////////////////////////////////////////
+/* =====================================================
+🔒 GARANTIR AUTOPLAY (ANDROID / TABLET)
+===================================================== */
 
 document.body.addEventListener("click", () => {
   player.play().catch(() => {});
