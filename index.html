@@ -27,6 +27,10 @@ html, body {
   object-fit:cover;
   background:black;
   z-index:1;
+
+  /* 🔥 TRANSIÇÃO SUAVE */
+  opacity:1;
+  transition: opacity 0.8s ease-in-out;
 }
 
 #topbar {
@@ -100,14 +104,25 @@ function carregarVideo(){
 
   let src = videos[index];
 
-  player.pause();
-  player.removeAttribute("src");
-  player.load();
+  /* 🔥 FADE OUT */
+  player.style.opacity = 0;
 
   setTimeout(() => {
+
+    player.pause();
+    player.removeAttribute("src");
+    player.load();
+
     player.src = src;
+
     player.play().catch(()=>{});
-  }, 300);
+
+    /* 🔥 FADE IN */
+    setTimeout(() => {
+      player.style.opacity = 1;
+    }, 100);
+
+  }, 800); // tempo do fade-out
 }
 
 player.onended = () => {
@@ -150,17 +165,13 @@ function buscarClima(){
 buscarClima();
 setInterval(buscarClima, 600000);
 
-/* 📅 DATA + HORA + TEXTO */
+/* 📅 INFO */
 function atualizarInfo(){
 
   let agora = new Date();
 
   let hora = agora.toLocaleTimeString("pt-BR");
-
-  // DIA DA SEMANA POR EXTENSO
   let diaSemana = agora.toLocaleDateString("pt-BR", { weekday: 'long' });
-
-  // DATA COMPLETA
   let data = agora.toLocaleDateString("pt-BR");
 
   document.getElementById("info").innerText =
