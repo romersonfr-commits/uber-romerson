@@ -1,4 +1,4 @@
-<!D<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -16,7 +16,7 @@ html, body {
   font-family:Arial, sans-serif;
 }
 
-/* 🎬 VÍDEO */
+/* PLAYER */
 #player {
   position:fixed;
   top:0;
@@ -26,17 +26,26 @@ html, body {
   object-fit:cover;
   background:black;
   z-index:1;
-  opacity:1;
-  transition: opacity 0.5s ease;
 }
 
-/* 📺 BARRA SUPERIOR (DOBRO DO TAMANHO) */
+/* ERRO VISUAL */
+#erro {
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  color:red;
+  font-size:30px;
+  z-index:20;
+  display:none;
+}
+
+/* TOPBAR */
 #topbar {
   position:fixed;
   top:0;
-  left:0;
   width:100%;
-  height:100px; /* DOBRO */
+  height:100px;
   background:rgba(0,0,0,0.75);
   color:white;
   display:flex;
@@ -45,28 +54,24 @@ html, body {
   z-index:10;
 }
 
-/* LOGO MAIOR */
 #logo {
-  font-weight:bold;
+  font-size:28px;
   color:#FFD700;
   margin-right:30px;
-  font-size:28px; /* DOBRO */
+  font-weight:bold;
 }
 
-/* TEXTO ROLANDO */
 #marquee {
   flex:1;
-  white-space:nowrap;
   overflow:hidden;
+  white-space:nowrap;
 }
 
-/* TEXTO DOBRADO */
 #marquee span {
   display:inline-block;
   padding-left:100%;
   animation:scroll 18s linear infinite;
-  font-size:28px; /* DOBRO */
-  font-weight:500;
+  font-size:28px;
 }
 
 @keyframes scroll {
@@ -78,22 +83,23 @@ html, body {
 
 <body>
 
-<!-- 📺 BARRA -->
 <div id="topbar">
   <div id="logo">Bee Geomarketing</div>
   <div id="marquee">
-    <span id="info">Iniciando sistema...</span>
+    <span id="info">Carregando sistema...</span>
   </div>
 </div>
 
-<!-- 🎬 PLAYER -->
-<video id="player" muted autoplay playsinline webkit-playsinline></video>
+<div id="erro">⚠️ Vídeo não encontrado</div>
+
+<video id="player" muted autoplay playsinline></video>
 
 <script>
 const player = document.getElementById("player");
+const erro = document.getElementById("erro");
 
 //////////////////////////////////////////////////
-// 🎬 PLAYLIST
+// 🔥 TROCA AQUI PELO CAMINHO CERTO
 //////////////////////////////////////////////////
 
 const videos = [
@@ -106,313 +112,44 @@ const videos = [
 
 let index = 0;
 
-function carregarVideo() {
+function carregarVideo(){
+
+  erro.style.display = "none";
 
   let source = videos[index];
 
-  console.log("▶️ Tocando:", source);
+  console.log("Tentando:", source);
 
-  player.style.opacity = 0;
+  player.src = source;
+  player.load();
 
-  setTimeout(() => {
+  player.oncanplay = () => {
+    player.play();
+  };
 
-    player.src = source;
-    player.load();
-
-    player.oncanplay = () => {
-      player.play().catch(err => {
-        console.log("Erro autoplay:", err);
-      });
-      player.style.opacity = 1;
-    };
-
-  }, 300);
 }
 
-// próximo vídeo
+player.onerror = () => {
+  console.log("ERRO ao carregar vídeo");
+  erro.style.display = "block";
+};
+
 player.onended = () => {
   index = (index + 1) % videos.length;
   carregarVideo();
 };
 
-// erro
-player.onerror = () => {
-  console.log("❌ Erro no vídeo:", videos[index]);
-  index = (index + 1) % videos.length;
-  carregarVideo();
-};
-
-// iniciar
 carregarVideo();
 
 //////////////////////////////////////////////////
-// ⏰ INFO + CLIMA + WHATSAPP
+// INFO
 //////////////////////////////////////////////////
 
-async function atualizarInfo(){
-
+setInterval(() => {
   let hora = new Date().toLocaleTimeString("pt-BR");
-
-  function montarTexto(local, temp){
-    return `${local} • ${hora} • ${temp}°C ☀️ • Anuncie aqui (51) 9 8017 1851`;
-  }
-
-  document.getElementById("info").innerText = montarTexto("São Leopoldo", "--");
-
-  try {
-
-    navigator.geolocation.getCurrentPosition(async pos => {
-
-      let lat = pos.coords.latitude;
-      let lon = pos.coords.longitude;
-
-      try {
-        let climaReq = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-        let climaData = await climaReq.json();
-
-        let temp = Math.round(climaData.current_weather.temperature);
-
-        document.getElementById("info").innerText =
-          montarTexto("Sua região", temp);
-
-      } catch {
-        document.getElementById("info").innerText =
-          montarTexto("Sua região", "--");
-      }
-
-    }, () => fallback());
-
-  } catch {
-    fallback();
-  }
-
-  async function fallback(){
-    try {
-      let climaReq = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&current_weather=true`);
-      let climaData = await climaReq.json();
-
-      let temp = Math.round(climaData.current_weather.temperature);
-
-      document.getElementById("info").innerText =
-        montarTexto("São Leopoldo", temp);
-
-    } catch {
-      document.getElementById("info").innerText =
-        montarTexto("São Leopoldo", "--");
-    }
-  }
-}
-
-setInterval(atualizarInfo, 10000);
-atualizarInfo();
-
-//////////////////////////////////////////////////
-// 🔒 AUTOPLAY GARANTIDO
-//////////////////////////////////////////////////
-
-document.addEventListener("click", () => {
-  player.play().catch(() => {});
-});
-
-</script>
-
-</body>
-</html>OCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bee DOOH Player</title>
-
-<style>
-html, body {
-  margin:0;
-  padding:0;
-  width:100vw;
-  height:100vh;
-  background:black;
-  overflow:hidden;
-  font-family:Arial, sans-serif;
-}
-
-/* 🎬 VÍDEO */
-#player {
-  position:fixed;
-  top:0;
-  left:0;
-  width:100vw;
-  height:100vh;
-  object-fit:cover;
-  background:black;
-  z-index:1;
-  opacity:1;
-  transition: opacity 0.5s ease;
-}
-
-/* 📺 BARRA SUPERIOR */
-#topbar {
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:50px;
-  background:rgba(0,0,0,0.7);
-  color:white;
-  display:flex;
-  align-items:center;
-  padding:0 15px;
-  font-size:18px;
-  z-index:10;
-}
-
-#logo {
-  font-weight:bold;
-  color:#FFD700;
-  margin-right:20px;
-}
-
-/* TEXTO ROLANDO */
-#marquee {
-  flex:1;
-  white-space:nowrap;
-  overflow:hidden;
-}
-
-#marquee span {
-  display:inline-block;
-  padding-left:100%;
-  animation:scroll 15s linear infinite;
-}
-
-@keyframes scroll {
-  from { transform:translateX(0); }
-  to { transform:translateX(-100%); }
-}
-</style>
-</head>
-
-<body>
-
-<!-- 📺 BARRA -->
-<div id="topbar">
-  <div id="logo">Bee Geomarketing</div>
-  <div id="marquee">
-    <span id="info">Iniciando sistema...</span>
-  </div>
-</div>
-
-<!-- 🎬 PLAYER -->
-<video id="player" muted autoplay playsinline webkit-playsinline></video>
-
-<script>
-const player = document.getElementById("player");
-
-//////////////////////////////////////////////////
-// 🎬 PLAYLIST
-//////////////////////////////////////////////////
-
-const videos = [
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774379953/Design_sem_nome_1_vdkqmd.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774378096/Design_sem_nome_osvmoo.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297195/oficina_vrzqlz.mp4"
-];
-
-let index = 0;
-
-function carregarVideo() {
-
-  let source = videos[index];
-
-  console.log("▶️ Tocando:", source);
-
-  player.style.opacity = 0;
-
-  setTimeout(() => {
-
-    player.src = source;
-    player.load();
-
-    player.oncanplay = () => {
-      player.play().catch(err => {
-        console.log("Erro autoplay:", err);
-      });
-      player.style.opacity = 1;
-    };
-
-  }, 300);
-}
-
-// próximo vídeo
-player.onended = () => {
-  index = (index + 1) % videos.length;
-  carregarVideo();
-};
-
-// erro (pula pro próximo)
-player.onerror = () => {
-  console.log("❌ Erro no vídeo:", videos[index]);
-  index = (index + 1) % videos.length;
-  carregarVideo();
-};
-
-// iniciar
-carregarVideo();
-
-//////////////////////////////////////////////////
-// ⏰ INFO + CLIMA
-//////////////////////////////////////////////////
-
-async function atualizarInfo(){
-
-  let hora = new Date().toLocaleTimeString("pt-BR");
-
-  let texto = `São Leopoldo • ${hora} • Atualizando...`;
-  document.getElementById("info").innerText = texto;
-
-  function fallback(temp = "--"){
-    document.getElementById("info").innerText =
-      `São Leopoldo • ${hora} • ${temp}°C ☀️ • Anuncie aqui`;
-  }
-
-  try {
-
-    navigator.geolocation.getCurrentPosition(async pos => {
-
-      let lat = pos.coords.latitude;
-      let lon = pos.coords.longitude;
-
-      try {
-        let climaReq = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-        let climaData = await climaReq.json();
-
-        let temp = Math.round(climaData.current_weather.temperature);
-
-        document.getElementById("info").innerText =
-          `Sua região • ${hora} • ${temp}°C ☀️ • Anuncie aqui`;
-
-      } catch {
-        fallback();
-      }
-
-    }, () => fallback());
-
-  } catch {
-    fallback();
-  }
-}
-
-setInterval(atualizarInfo, 10000);
-atualizarInfo();
-
-//////////////////////////////////////////////////
-// 🔒 GARANTIR AUTOPLAY (ANDROID / KIOSK)
-//////////////////////////////////////////////////
-
-document.addEventListener("click", () => {
-  player.play().catch(() => {});
-});
+  document.getElementById("info").innerText =
+    `São Leopoldo • ${hora} • Anuncie aqui (51) 9 8017 1851`;
+}, 5000);
 
 </script>
 
