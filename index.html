@@ -8,8 +8,6 @@
 <title>Bee DOOH Player</title>
 
 <style>
-
-/* RESET */
 html, body {
   margin:0;
   padding:0;
@@ -20,7 +18,6 @@ html, body {
   font-family:Arial;
 }
 
-/* VÍDEO */
 #player {
   position:fixed;
   top:0;
@@ -32,7 +29,6 @@ html, body {
   z-index:1;
 }
 
-/* BARRA SUPERIOR */
 #topbar {
   position:fixed;
   top:0;
@@ -47,7 +43,6 @@ html, body {
   z-index:10;
 }
 
-/* LOGO */
 #logo {
   font-size:28px;
   color:#FFD700;
@@ -55,7 +50,6 @@ html, body {
   font-weight:bold;
 }
 
-/* TEXTO ROLANDO */
 #marquee {
   flex:1;
   overflow:hidden;
@@ -73,29 +67,24 @@ html, body {
   from { transform:translateX(0); }
   to { transform:translateX(-100%); }
 }
-
 </style>
+
 </head>
 
 <body>
 
-<!-- BARRA -->
 <div id="topbar">
   <div id="logo">Bee Geomarketing</div>
   <div id="marquee">
-    <span id="info">Carregando...</span>
+    <span id="info"></span>
   </div>
 </div>
 
-<!-- VÍDEO -->
 <video id="player" muted playsinline></video>
 
 <script>
 
-/* =====================================================
-🎬 VÍDEOS (CLOUDINARY)
-===================================================== */
-
+/* VÍDEOS */
 const videos = [
   "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774379953/Design_sem_nome_1_vdkqmd.mp4",
   "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774297195/oficina_vrzqlz.mp4",
@@ -103,10 +92,6 @@ const videos = [
   "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774297193/hamburgueria_hdbmki.mp4",
   "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774297193/churrasco_ya02cz.mp4"
 ];
-
-/* =====================================================
-🎯 PLAYER
-===================================================== */
 
 let index = 0;
 const player = document.getElementById("player");
@@ -137,18 +122,7 @@ player.onerror = () => {
 
 carregarVideo();
 
-/* =====================================================
-🌦️ CLIMA (OPEN-METEO - GRÁTIS)
-===================================================== */
-
-/*
-📍 São Leopoldo:
-Latitude: -29.76
-Longitude: -51.15
-
-👉 Pode alterar para qualquer cidade depois
-*/
-
+/* 🌦️ CLIMA */
 let temperatura = "--";
 let climaIcone = "☀️";
 
@@ -162,7 +136,6 @@ function buscarClima(){
 
       let code = data.current_weather.weathercode;
 
-      // Tradução simples do clima
       if(code === 0) climaIcone = "☀️";
       else if(code <= 3) climaIcone = "⛅";
       else if(code <= 48) climaIcone = "☁️";
@@ -171,28 +144,29 @@ function buscarClima(){
       else climaIcone = "🌩️";
 
     })
-    .catch(() => {
-      console.log("Erro ao buscar clima");
-    });
+    .catch(() => {});
 }
 
-/* busca clima a cada 10 minutos */
 buscarClima();
 setInterval(buscarClima, 600000);
 
-/* =====================================================
-⏰ TEXTO DA BARRA
-===================================================== */
-
+/* 📅 DATA + HORA + TEXTO */
 function atualizarInfo(){
 
-  let hora = new Date().toLocaleTimeString("pt-BR");
+  let agora = new Date();
+
+  let hora = agora.toLocaleTimeString("pt-BR");
+
+  // DIA DA SEMANA POR EXTENSO
+  let diaSemana = agora.toLocaleDateString("pt-BR", { weekday: 'long' });
+
+  // DATA COMPLETA
+  let data = agora.toLocaleDateString("pt-BR");
 
   document.getElementById("info").innerText =
-    `São Leopoldo • ${temperatura}°C ${climaIcone} • ${hora} • Anuncie aqui (51) 9 8017 1851`;
+    `São Leopoldo • ${temperatura}°C ${climaIcone} • ${diaSemana} • ${data} • ${hora} • Anuncie aqui (51) 9 8017 1851`;
 }
 
-/* atualiza a cada 5 segundos */
 setInterval(atualizarInfo, 5000);
 atualizarInfo();
 
