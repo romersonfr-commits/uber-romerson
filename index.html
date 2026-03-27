@@ -16,7 +16,7 @@ html, body {
   font-family:Arial, sans-serif;
 }
 
-/* PLAYER */
+/* 🎬 VÍDEO */
 #player {
   position:fixed;
   top:0;
@@ -28,22 +28,24 @@ html, body {
   z-index:1;
 }
 
-/* ERRO VISUAL */
+/* ⚠️ ERRO VISUAL */
 #erro {
   position:fixed;
   top:50%;
   left:50%;
   transform:translate(-50%, -50%);
-  color:red;
-  font-size:30px;
+  color:#ff4444;
+  font-size:28px;
+  text-align:center;
   z-index:20;
   display:none;
 }
 
-/* TOPBAR */
+/* 📺 BARRA SUPERIOR */
 #topbar {
   position:fixed;
   top:0;
+  left:0;
   width:100%;
   height:100px;
   background:rgba(0,0,0,0.75);
@@ -61,6 +63,7 @@ html, body {
   font-weight:bold;
 }
 
+/* TEXTO ROLANDO */
 #marquee {
   flex:1;
   overflow:hidden;
@@ -83,6 +86,7 @@ html, body {
 
 <body>
 
+<!-- 📺 BARRA -->
 <div id="topbar">
   <div id="logo">Bee Geomarketing</div>
   <div id="marquee">
@@ -90,24 +94,32 @@ html, body {
   </div>
 </div>
 
-<div id="erro">⚠️ Vídeo não encontrado</div>
+<!-- ⚠️ ERRO -->
+<div id="erro">⚠️ Verifique os vídeos</div>
 
-<video id="player" muted autoplay playsinline></video>
+<!-- 🎬 PLAYER -->
+<video id="player" muted playsinline webkit-playsinline preload="auto"></video>
 
 <script>
 const player = document.getElementById("player");
 const erro = document.getElementById("erro");
 
 //////////////////////////////////////////////////
-// 🔥 TROCA AQUI PELO CAMINHO CERTO
+// 🔥 CONFIGURE AQUI SEUS VÍDEOS
 //////////////////////////////////////////////////
 
 const videos = [
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774379953/Design_sem_nome_1_vdkqmd.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297195/oficina_vrzqlz.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774378096/Design_sem_nome_osvmoo.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/hamburgueria_hdbmki.mp4",
-  "https://res.cloudinary.com/dfe8shcvj/video/upload/v1774297193/churrasco_ya02cz.mp4"
+  // ESCOLHA UMA OPÇÃO:
+
+  // 👉 LOCAL (tablet)
+  //"file:///storage/emulated/0/Download/video1.mp4",
+
+  // 👉 MESMA PASTA DO HTML
+  "./video1.mp4",
+  "./video2.mp4",
+
+  // 👉 ONLINE (recomendado futuramente)
+  //"https://seusite.com/video1.mp4"
 ];
 
 let index = 0;
@@ -118,38 +130,71 @@ function carregarVideo(){
 
   let source = videos[index];
 
-  console.log("Tentando:", source);
+  console.log("▶️ Tentando:", source);
 
-  player.src = source;
+  player.pause();
+  player.removeAttribute("src");
   player.load();
 
-  player.oncanplay = () => {
-    player.play();
-  };
+  setTimeout(() => {
 
+    player.src = source;
+
+    player.oncanplay = () => {
+      console.log("✅ Vídeo carregado");
+      player.play().catch(() => {});
+    };
+
+  }, 300);
 }
 
-player.onerror = () => {
-  console.log("ERRO ao carregar vídeo");
-  erro.style.display = "block";
-};
+//////////////////////////////////////////////////
+// EVENTOS
+//////////////////////////////////////////////////
 
 player.onended = () => {
   index = (index + 1) % videos.length;
   carregarVideo();
 };
 
+player.onerror = () => {
+  console.log("❌ ERRO no vídeo:", videos[index]);
+
+  erro.style.display = "block";
+
+  // pula pro próximo
+  index = (index + 1) % videos.length;
+
+  setTimeout(carregarVideo, 2000);
+};
+
+//////////////////////////////////////////////////
+// INICIAR
+//////////////////////////////////////////////////
+
 carregarVideo();
 
 //////////////////////////////////////////////////
-// INFO
+// ⏰ INFO + WHATS
 //////////////////////////////////////////////////
 
-setInterval(() => {
+function atualizarInfo(){
   let hora = new Date().toLocaleTimeString("pt-BR");
+
   document.getElementById("info").innerText =
     `São Leopoldo • ${hora} • Anuncie aqui (51) 9 8017 1851`;
-}, 5000);
+}
+
+setInterval(atualizarInfo, 5000);
+atualizarInfo();
+
+//////////////////////////////////////////////////
+// 🔒 FORÇA AUTOPLAY (ANDROID)
+//////////////////////////////////////////////////
+
+document.body.addEventListener("click", () => {
+  player.play().catch(() => {});
+});
 
 </script>
 
