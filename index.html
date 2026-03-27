@@ -28,7 +28,6 @@ html, body {
   background:black;
   z-index:1;
 
-  /* 🔥 TRANSIÇÃO SUAVE */
   opacity:1;
   transition: opacity 0.8s ease-in-out;
 }
@@ -104,7 +103,6 @@ function carregarVideo(){
 
   let src = videos[index];
 
-  /* 🔥 FADE OUT */
   player.style.opacity = 0;
 
   setTimeout(() => {
@@ -117,12 +115,11 @@ function carregarVideo(){
 
     player.play().catch(()=>{});
 
-    /* 🔥 FADE IN */
     setTimeout(() => {
       player.style.opacity = 1;
     }, 100);
 
-  }, 800); // tempo do fade-out
+  }, 800);
 }
 
 player.onended = () => {
@@ -180,6 +177,11 @@ function atualizarInfo(){
 
 setInterval(atualizarInfo, 5000);
 atualizarInfo();
+
+/* 🔄 AUTO RELOAD (SOLUÇÃO 2) */
+setTimeout(() => {
+  location.reload(true);
+}, 600000); // 10 minutos
 
 </script>
 
