@@ -15,7 +15,7 @@ html, body {
   height:100vh;
   background:black;
   overflow:hidden;
-  font-family:Arial;
+  font-family:Arial; /* 👉 Você pode alterar a fonte aqui */
 }
 
 #player {
@@ -24,12 +24,13 @@ html, body {
   left:0;
   width:100vw;
   height:100vh;
-  object-fit:cover;
+  object-fit:cover; /* 👉 "cover" preenche a tela inteira (pode cortar vídeo)
+                       👉 use "contain" se quiser mostrar o vídeo inteiro */
   background:black;
   z-index:1;
 
   opacity:1;
-  transition: opacity 0.8s ease-in-out;
+  transition: opacity 0.8s ease-in-out; /* 👉 controla a suavidade da troca de vídeos */
 }
 
 #topbar {
@@ -37,61 +38,52 @@ html, body {
   top:0;
   left:0;
   width:100%;
-  height:90px;
-  background:rgba(0,0,0,0.75);
+  height:30px; /* 👉 altura da barra superior (pode aumentar/diminuir) */
+  background:rgba(0,0,0,0.35); /* 👉 transparência da barra */
   color:white;
   display:flex;
   align-items:center;
-  padding:0 20px;
+  padding:0 25px;
   z-index:10;
 }
 
-/* ✅ LOGO COMO IMAGEM */
 #logo {
-  height:60px;
-  width:auto;
-  margin-right:25px;
-  flex-shrink:0;
+  font-size:28px; /* 👉 tamanho do logo */
+  color:#FFD700; /* 👉 cor do texto/logo */
+  margin-right:30px;
+  font-weight:bold;
 }
 
-/* área do texto */
+/* 👉 COMO TROCAR LOGO POR IMAGEM (ex: Cloudinary)
+   1. Substitua a DIV por:
+      <img id="logo" src="URL_DA_IMAGEM">
+
+   2. E adicione no CSS:
+      #logo {
+        height:60px;
+      }
+
+   ✔ SIM, você pode hospedar no Cloudinary normalmente
+   ✔ Exemplo:
+   https://res.cloudinary.com/SEU_ID/image/upload/logo.png
+*/
+
 #marquee {
   flex:1;
   overflow:hidden;
   white-space:nowrap;
 }
 
-/* texto rolando */
 #marquee span {
   display:inline-block;
   padding-left:100%;
-  animation:scroll 18s linear infinite;
-  font-size:26px;
+  animation:scroll 18s linear infinite; /* 👉 velocidade do texto rolando */
+  font-size:28px;
 }
 
-/* animação */
 @keyframes scroll {
   from { transform:translateX(0); }
   to { transform:translateX(-100%); }
-}
-
-/* 📱 RESPONSIVIDADE (TABLET / TELAS MENORES) */
-@media (max-width: 1024px) {
-
-  #topbar {
-    height:70px;
-    padding:0 15px;
-  }
-
-  #logo {
-    height:45px;
-    margin-right:15px;
-  }
-
-  #marquee span {
-    font-size:20px;
-  }
-
 }
 </style>
 
@@ -100,14 +92,15 @@ html, body {
 <body>
 
 <div id="topbar">
+  <div id="logo">Bee Geomarketing</div> <!-- 👉 TEXTO DO LOGO (pode alterar aqui) -->
 
-  <!-- ✅ LOGO (CLOUDINARY) -->
-  <img id="logo" src="https://res.cloudinary.com/dfe8shcvj/image/upload/w_300/v1774665755/bee_geo_marketing_transparente_wee210.png">
+  <!-- 👉 PARA USAR IMAGEM NO LUGAR:
+       <img id="logo" src="https://res.cloudinary.com/.../logo.png">
+  -->
 
   <div id="marquee">
-    <span id="info"></span>
+    <span id="info"></span> <!-- 👉 TEXTO DINÂMICO (cidade, clima, etc) -->
   </div>
-
 </div>
 
 <video id="player" muted playsinline></video>
@@ -117,11 +110,58 @@ html, body {
 /* VÍDEOS */
 const videos = [
 
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643064/Patelaria_bnnooc.mp4",
+/* 👉 AQUI VOCÊ ADICIONA / REMOVE ANÚNCIOS
+   ✔ Cada linha = 1 vídeo
+   ✔ Pode usar Cloudinary (RECOMENDADO)
+   ✔ Pode repetir vídeos (como você já fez com "Anuncie Aqui")
+*/
+
+ "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643064/Patelaria_bnnooc.mp4",
+
 "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643064/Revenda_sos7xr.mp4",
+
 "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643065/Pizzaria_ee2k3q.mp4",
+
 "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643065/Brigadeiro_xr3xdd.mp4",
+
 "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643062/Hamburguer_fhgv8b.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Anuncie_Aqui_q2zx9r.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643062/Eletricista_pmwszp.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Farmacia_nfl4mq.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643061/Advogado_njhruk.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643060/Oficina_wlcl7n.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643061/Barbearia_eixmqt.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Anuncie_Aqui_q2zx9r.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643053/Borracharia_xokk0z.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643059/Praia_cjr0xs.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643053/Confeitaria_qt7yof.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643052/Churrasco_fqkpcu.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643051/PetShop_xnewsl.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Anuncie_Aqui_q2zx9r.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643050/Chaveiro_x6tekq.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643049/Loja_uxo3lq.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643050/A%C3%A7aiteria_narioo.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643048/O_Melhor_X_wh7zj0.mp4",
+
+"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643046/Clinica_Estetica_yhh2nc.mp4",
+
 "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Anuncie_Aqui_q2zx9r.mp4"
 
 ];
@@ -131,9 +171,9 @@ const player = document.getElementById("player");
 
 function carregarVideo(){
 
-  let src = videos[index];
+  let src = videos[index]; /* 👉 pega o vídeo atual da lista */
 
-  player.style.opacity = 0;
+  player.style.opacity = 0; /* 👉 inicia fade-out */
 
   setTimeout(() => {
 
@@ -146,19 +186,19 @@ function carregarVideo(){
     player.play().catch(()=>{});
 
     setTimeout(() => {
-      player.style.opacity = 1;
+      player.style.opacity = 1; /* 👉 fade-in */
     }, 100);
 
-  }, 800);
+  }, 800); /* 👉 tempo da transição */
 }
 
 player.onended = () => {
-  index = (index + 1) % videos.length;
+  index = (index + 1) % videos.length; /* 👉 passa para o próximo vídeo */
   carregarVideo();
 };
 
 player.onerror = () => {
-  index = (index + 1) % videos.length;
+  index = (index + 1) % videos.length; /* 👉 se der erro, pula */
   setTimeout(carregarVideo, 2000);
 };
 
@@ -171,6 +211,11 @@ let climaIcone = "☀️";
 function buscarClima(){
 
   fetch("https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&current_weather=true")
+  /* 👉 ALTERAR LOCALIZAÇÃO:
+     latitude / longitude da cidade desejada
+     Ex: Porto Alegre = -30.03, -51.23
+  */
+
     .then(res => res.json())
     .then(data => {
 
@@ -190,7 +235,7 @@ function buscarClima(){
 }
 
 buscarClima();
-setInterval(buscarClima, 600000);
+setInterval(buscarClima, 600000); /* 👉 atualiza clima a cada 10 min */
 
 /* 📅 INFO */
 function atualizarInfo(){
@@ -203,15 +248,26 @@ function atualizarInfo(){
 
   document.getElementById("info").innerText =
     `São Leopoldo • ${temperatura}°C ${climaIcone} • ${diaSemana} • ${data} • ${hora} • Anuncie aqui (51) 9 8017 1851`;
+
+  /* 👉 VOCÊ PODE ALTERAR:
+     - nome da cidade
+     - telefone
+     - mensagem de CTA
+  */
 }
 
 setInterval(atualizarInfo, 5000);
 atualizarInfo();
 
-/* 🔄 AUTO RELOAD */
+/* 🔄 AUTO RELOAD (SOLUÇÃO 2) */
 setTimeout(() => {
   location.reload(true);
-}, 420000);
+}, 420000); // 7 minutos
+
+/* 👉 IMPORTANTE:
+   Isso força atualização do conteúdo (evita cache travado do GitHub)
+   ✔ Ideal para Fully Kiosk
+*/
 
 </script>
 
