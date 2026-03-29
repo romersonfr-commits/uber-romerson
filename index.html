@@ -1,35 +1,9 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Bee DOOH Player</title>
-
-  <!-- Firebase VERSÃO CORRETA -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
-  <style>
-    body {
-      margin: 0;
-      background: black;
-      overflow: hidden;
-    }
-
-    video {
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-    }
-  </style>
-</head>
-
-<body>
-
-<video id="player" autoplay muted playsinline></video>
-
 <script>
+
 /* =========================
-   🔧 CONFIG FIREBASE (EDITÁVEL)
+   🔐 CONFIG FIREBASE (EDITÁVEL)
+   👉 Aqui ficam os dados do seu projeto Firebase
+   👉 Só altere se trocar de projeto
 ========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
@@ -42,51 +16,117 @@ const firebaseConfig = {
 
 /* =========================
    🚀 INICIALIZA FIREBASE
+   👉 NÃO ALTERAR
 ========================= */
 firebase.initializeApp(firebaseConfig);
+
+/* =========================
+   🔗 CONEXÃO COM BANCO
+   👉 NÃO ALTERAR
+========================= */
 const db = firebase.firestore();
 
 /* =========================
-   🎬 PLAYER (EDITÁVEL)
+   🚗 IDENTIFICAÇÃO DO TABLET (NOVO)
+   👉 Cada tablet usa um ID diferente
+   👉 Esse ID vem da URL
+   👉 Exemplo:
+   site.com/?id=carro_01
 ========================= */
-let videos = [];
-let index = 0;
-const player = document.getElementById("player");
+
+// 🔥 PEGA PARÂMETROS DA URL
+const urlParams = new URLSearchParams(window.location.search);
+
+// 🔥 DEFINE QUAL CARRO É ESSE TABLET
+// 👉 Se não tiver ?id= na URL, usa "carro_01" como padrão
+const deviceId = urlParams.get("id") || "carro_01";
+
+// 👉 MOSTRA NO CONSOLE QUAL CARRO ESTÁ ATIVO
+console.log("🚗 Dispositivo atual:", deviceId);
+
 
 /* =========================
-   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+   🎬 PLAYER (EDITÁVEL)
+   👉 Aqui ficam os vídeos carregados
+========================= */
+
+// 🔥 LISTA DE VÍDEOS (vem do Firebase)
+let videos = [];
+
+// 🔥 CONTROLE DO VÍDEO ATUAL
+let index = 0;
+
+// 🔥 REFERÊNCIA DO PLAYER
+const player = document.getElementById("player");
+
+
+/* =========================
+   ▶️ FUNÇÃO DE REPRODUÇÃO
+   👉 Controla a troca automática de vídeos
 ========================= */
 function carregarVideo() {
+
+  // 🚫 Se não tiver vídeos, não faz nada
   if (videos.length === 0) return;
 
+  // 🔥 Define o vídeo atual
   player.src = videos[index];
+
+  // ▶️ Dá play
   player.play();
 
+  // 🔄 Quando o vídeo acabar
   player.onended = () => {
+
+    // 🔁 Vai para o próximo vídeo
     index = (index + 1) % videos.length;
+
+    // 🔄 Chama novamente (loop infinito)
     carregarVideo();
   };
 }
 
 
-carregarVideo();
-
 /* =========================
-   🔥 FIREBASE (DEPOIS ATIVA)
+   🔥 CONEXÃO COM FIREBASE (DINÂMICO)
+   👉 Aqui acontece a mágica
+   👉 Cada tablet puxa dados do seu próprio "carro"
 ========================= */
 
-db.collection("devices").doc("carro_01")
+db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
+
+  // 📦 Pega os dados do Firebase
   const data = doc.data();
 
+  // 🔍 Mostra no console (debug)
+  console.log("🔥 Dados recebidos:", data);
+
+  /* =========================
+     🧠 CONTROLE DE STATUS
+     👉 Permite ligar/desligar anúncios remotamente
+  ========================= */
   if (data.status === "on") {
+
+    // 🎬 Atualiza lista de vídeos
     videos = data.videos;
+
+    // 🔄 Reinicia do primeiro vídeo
     index = 0;
+
+    // ▶️ Começa a reprodução
     carregarVideo();
   }
+
+  /* =========================
+     ⛔ SE STATUS = OFF
+     👉 Para os vídeos
+  ========================= */
+  else {
+    player.pause();
+    console.log("⛔ Player pausado");
+  }
+
 });
 
 </script>
-
-</body>
-</html>
