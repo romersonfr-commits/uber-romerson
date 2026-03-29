@@ -1,274 +1,194 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Bee DOOH Player</title>
+<title>Bee DOOH Player PRO</title>
+
+<!-- 🔥 FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
 
 <style>
-html, body {
+/* 🔧 CONFIGURAÇÃO VISUAL GERAL */
+body {
   margin:0;
-  padding:0;
-  width:100vw;
-  height:100vh;
   background:black;
   overflow:hidden;
-  font-family:Arial; /* 👉 Você pode alterar a fonte aqui */
 }
 
+/* 🎥 PLAYER */
 #player {
-  position:fixed;
-  top:0;
-  left:0;
   width:100vw;
   height:100vh;
-  object-fit:cover; /* 👉 "cover" preenche a tela inteira (pode cortar vídeo)
-                       👉 use "contain" se quiser mostrar o vídeo inteiro */
-  background:black;
-  z-index:1;
-
-  opacity:1;
-  transition: opacity 0.8s ease-in-out; /* 👉 controla a suavidade da troca de vídeos */
+  object-fit:cover; /* 👉 ALTERAR: cover / contain */
 }
 
+/* 🔝 BARRA SUPERIOR */
 #topbar {
   position:fixed;
   top:0;
-  left:0;
   width:100%;
-  height:30px; /* 👉 altura da barra superior (pode aumentar/diminuir) */
-  background:rgba(0,0,0,0.50); /* 👉 transparência da barra */
+  background:rgba(0,0,0,0.5); /* 👉 ALTERAR transparência */
   color:white;
-  display:flex;
-  align-items:center;
-  padding:0 25px;
-  z-index:10;
-}
-
-#logo {
-  font-size:28px; /* 👉 tamanho do logo */
-  color:#FFD700; /* 👉 cor do texto/logo */
-  margin-right:30px;
-  font-weight:bold;
-}
-
-/* 👉 COMO TROCAR LOGO POR IMAGEM (ex: Cloudinary)
-   1. Substitua a DIV por:
-      <img id="logo" src="URL_DA_IMAGEM">
-
-   2. E adicione no CSS:
-      #logo {
-        height:60px;
-      }
-
-   ✔ SIM, você pode hospedar no Cloudinary normalmente
-   ✔ Exemplo:
-   https://res.cloudinary.com/SEU_ID/image/upload/logo.png
-*/
-
-#marquee {
-  flex:1;
-  overflow:hidden;
-  white-space:nowrap;
-}
-
-#marquee span {
-  display:inline-block;
-  padding-left:100%;
-  animation:scroll 23s linear infinite; /* 👉 velocidade do texto rolando */
-  font-size:28px;
-}
-
-@keyframes scroll {
-  from { transform:translateX(0); }
-  to { transform:translateX(-100%); }
+  padding:10px;
+  font-size:22px; /* 👉 ALTERAR tamanho texto */
 }
 </style>
-
 </head>
 
 <body>
 
 <div id="topbar">
-  <div id="logo">Bee Geo</div> <!-- 👉 TEXTO DO LOGO (pode alterar aqui) -->
-
-  <!-- 👉 PARA USAR IMAGEM NO LUGAR:
-       <img id="logo" src="https://res.cloudinary.com/.../logo.png">
-  -->
-
-  <div id="marquee">
-    <span id="info"></span> <!-- 👉 TEXTO DINÂMICO (cidade, clima, etc) -->
-  </div>
+  <span id="info">Carregando...</span>
 </div>
 
-<video id="player" muted playsinline></video>
+<video id="player" autoplay muted></video>
 
 <script>
 
-/* VÍDEOS */
-const videos = [
+/* =========================
+   🔐 CONFIG FIREBASE
+   👉 COLE AQUI O SEU
+========================= */
 
-/* 👉 AQUI VOCÊ ADICIONA / REMOVE ANÚNCIOS
-   ✔ Cada linha = 1 vídeo
-   ✔ Pode usar Cloudinary (RECOMENDADO)
-   ✔ Pode repetir vídeos (como você já fez com "Anuncie Aqui")
-*/
+const firebaseConfig = {
+  apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
+  authDomain: "bee-dooh.firebaseapp.com",
+  projectId: "bee-dooh",
+  storageBucket: "bee-dooh.firebasestorage.app",
+  messagingSenderId: "594686167676",
+  appId: "1:594686167676:web:77f7ee552c8ed1a4d997f9"
+};
 
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643064/Patelaria_bnnooc.mp4",
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643064/Revenda_sos7xr.mp4",
+/* =========================
+   🚗 IDENTIFICAÇÃO DO CARRO
+   👉 ALTERAR AQUI
+========================= */
 
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643065/Pizzaria_ee2k3q.mp4",
+const DEVICE_ID = "carro_01";
 
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643065/Brigadeiro_xr3xdd.mp4",
+/* =========================
+   🎥 PLAYER
+========================= */
 
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643062/Hamburguer_fhgv8b.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Anuncie_Aqui_q2zx9r.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643062/Eletricista_pmwszp.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Farmacia_nfl4mq.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643061/Advogado_njhruk.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643060/Oficina_wlcl7n.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643061/Barbearia_eixmqt.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Anuncie_Aqui_q2zx9r.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643053/Borracharia_xokk0z.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643059/Praia_cjr0xs.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643053/Confeitaria_qt7yof.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643052/Churrasco_fqkpcu.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643051/PetShop_xnewsl.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Anuncie_Aqui_q2zx9r.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643050/Chaveiro_x6tekq.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643049/Loja_uxo3lq.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643050/A%C3%A7aiteria_narioo.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643048/O_Melhor_X_wh7zj0.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643046/Clinica_Estetica_yhh2nc.mp4",
-
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643056/Anuncie_Aqui_q2zx9r.mp4"
-
-
-];
-
+let videos = [];
 let index = 0;
 const player = document.getElementById("player");
 
-function carregarVideo(){
+/* 🔄 CARREGAR DADOS DO FIREBASE */
+function iniciarListener(){
 
-  let src = videos[index]; /* 👉 pega o vídeo atual da lista */
+  db.collection("devices").doc(DEVICE_ID)
+  .onSnapshot(doc => {
 
-  player.style.opacity = 0; /* 👉 inicia fade-out */
+    if(!doc.exists) return;
 
-  setTimeout(() => {
+    const data = doc.data();
 
-    player.pause();
-    player.removeAttribute("src");
-    player.load();
+    /* 🔥 LIGA / DESLIGA REMOTO */
+    if(data.status === "off"){
+      player.pause();
+      return;
+    }
 
-    player.src = src;
+    /* 🎥 ATUALIZA LISTA DE VÍDEOS */
+    videos = data.videos || [];
 
-    player.play().catch(()=>{});
+    /* 🏙️ ALTERAR CIDADE */
+    cidade = data.cidade || "Cidade";
 
-    setTimeout(() => {
-      player.style.opacity = 1; /* 👉 fade-in */
-    }, 100);
-
-  }, 800); /* 👉 tempo da transição */
+  });
 }
 
+iniciarListener();
+
+/* ▶️ TROCAR VÍDEO */
+function carregarVideo(){
+
+  if(videos.length === 0) return;
+
+  player.src = videos[index];
+  player.play();
+
+  /* 📊 LOG DE EXECUÇÃO */
+  registrarLog(videos[index]);
+}
+
+/* 🔄 LOOP */
 player.onended = () => {
-  index = (index + 1) % videos.length; /* 👉 passa para o próximo vídeo */
+  index = (index + 1) % videos.length;
   carregarVideo();
 };
 
-player.onerror = () => {
-  index = (index + 1) % videos.length; /* 👉 se der erro, pula */
-  setTimeout(carregarVideo, 2000);
-};
+/* 📊 ENVIAR LOG */
+function registrarLog(video){
 
-carregarVideo();
-
-/* 🌦️ CLIMA */
-let temperatura = "--";
-let climaIcone = "☀️";
-
-function buscarClima(){
-
-  fetch("https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&current_weather=true")
-  /* 👉 ALTERAR LOCALIZAÇÃO:
-     latitude / longitude da cidade desejada
-     Ex: Porto Alegre = -30.03, -51.23
-  */
-
-    .then(res => res.json())
-    .then(data => {
-
-      temperatura = Math.round(data.current_weather.temperature);
-
-      let code = data.current_weather.weathercode;
-
-      if(code === 0) climaIcone = "☀️";
-      else if(code <= 3) climaIcone = "⛅";
-      else if(code <= 48) climaIcone = "☁️";
-      else if(code <= 67) climaIcone = "🌧️";
-      else if(code <= 77) climaIcone = "🌨️";
-      else climaIcone = "🌩️";
-
-    })
-    .catch(() => {});
+  db.collection("logs").add({
+    device: DEVICE_ID,
+    video: video,
+    data: new Date()
+  });
 }
 
-buscarClima();
-setInterval(buscarClima, 600000); /* 👉 atualiza clima a cada 10 min */
+/* =========================
+   🌍 GEOLOCALIZAÇÃO
+========================= */
 
-/* 📅 INFO */
+let cidade = "Carregando...";
+
+navigator.geolocation.getCurrentPosition(pos => {
+
+  let lat = pos.coords.latitude;
+  let lon = pos.coords.longitude;
+
+  buscarClima(lat, lon);
+
+});
+
+/* =========================
+   🌦️ CLIMA DINÂMICO
+========================= */
+
+let temp = "--";
+let icon = "☀️";
+
+function buscarClima(lat, lon){
+
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+  .then(r=>r.json())
+  .then(data=>{
+
+    temp = Math.round(data.current_weather.temperature);
+
+  });
+}
+
+/* =========================
+   🕒 INFO TOPO
+========================= */
+
 function atualizarInfo(){
 
   let agora = new Date();
 
-  let hora = agora.toLocaleTimeString("pt-BR");
-  let diaSemana = agora.toLocaleDateString("pt-BR", { weekday: 'long' });
-  let data = agora.toLocaleDateString("pt-BR");
-
   document.getElementById("info").innerText =
-    `São Leopoldo • ${temperatura}°C ${climaIcone} • ${diaSemana} • ${data} • ${hora} • Anuncie aqui (51) 9 8017 1851`;
+  `${cidade} • ${temp}°C • ${agora.toLocaleTimeString()} • Anuncie aqui`;
 
-  /* 👉 VOCÊ PODE ALTERAR:
-     - nome da cidade
-     - telefone
-     - mensagem de CTA
-  */
 }
 
-setInterval(atualizarInfo, 5000);
-atualizarInfo();
+setInterval(atualizarInfo, 3000);
 
-/* 🔄 AUTO RELOAD (SOLUÇÃO 2) */
-setTimeout(() => {
-  location.reload(true);
-}, 420000); // 7 minutos
-
-/* 👉 IMPORTANTE:
-   Isso força atualização do conteúdo (evita cache travado do GitHub)
-   ✔ Ideal para Fully Kiosk
-*/
+/* 🚀 INICIAR PLAYER */
+setInterval(()=>{
+  if(player.paused && videos.length > 0){
+    carregarVideo();
+  }
+},2000);
 
 </script>
 
