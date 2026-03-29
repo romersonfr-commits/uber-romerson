@@ -1,13 +1,74 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Teste</title>
-</head>
+<script>
 
-<body style="background:black;">
+/* =========================
+   🔧 CONFIG FIREBASE (EDITÁVEL)
+========================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
+  authDomain: "bee-dooh.firebaseapp.com",
+  projectId: "bee-dooh",
+  storageBucket: "bee-dooh.firebasestorage.app",
+  messagingSenderId: "594686167676",
+  appId: "1:594686167676:web:77f7ee552c8ed1a4d997f9"
+};
 
-<h1 style="color:white">FUNCIONANDO</h1>
+/* =========================
+   🚀 INICIALIZA FIREBASE
+========================= */
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-</body>
-</html>
+/* =========================
+   🎬 PLAYER (EDITÁVEL)
+========================= */
+let videos = [];
+let index = 0;
+const player = document.getElementById("player");
+
+/* =========================
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+========================= */
+function carregarVideo() {
+
+  if (!videos || videos.length === 0) {
+    console.log("⚠️ Nenhum vídeo encontrado");
+    return;
+  }
+
+  console.log("🎬 Rodando vídeo:", videos[index]);
+
+  player.src = videos[index];
+  player.play();
+
+  player.onended = () => {
+    index = (index + 1) % videos.length;
+    carregarVideo();
+  };
+}
+
+/* =========================
+   🔥 FIREBASE
+========================= */
+
+db.collection("devices").doc("carro_01")
+.onSnapshot((doc) => {
+
+  if (!doc.exists) {
+    console.log("❌ Documento não existe");
+    return;
+  }
+
+  const data = doc.data();
+  console.log("🔥 Dados Firebase:", data);
+
+  if (data.status === "on" && data.videos && data.videos.length > 0) {
+    videos = data.videos;
+    index = 0;
+    carregarVideo();
+  } else {
+    console.log("⛔ Sem vídeos ou status OFF");
+  }
+
+});
+
+</script>
