@@ -1,48 +1,36 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>Bee DOOH Player</title>
 
-<title>Bee Player</title>
+  <!-- Firebase VERSÃO CORRETA -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-<!-- ✅ FIREBASE VERSÃO COMPATÍVEL -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+    }
 
-<style>
-body{
-  margin:0;
-  background:black;
-}
-
-#player{
-  width:100vw;
-  height:100vh;
-  object-fit:cover;
-}
-
-#topbar{
-  position:fixed;
-  top:0;
-  width:100%;
-  background:rgba(0,0,0,0.5);
-  color:white;
-  padding:10px;
-}
-</style>
+    video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    }
+  </style>
 </head>
 
 <body>
 
-<div id="topbar">
-  <span id="info">Carregando...</span>
-</div>
-
 <video id="player" autoplay muted playsinline></video>
 
 <script>
-
+/* =========================
+   🔧 CONFIG FIREBASE (EDITÁVEL)
+========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
   authDomain: "bee-dooh.firebaseapp.com",
@@ -52,75 +40,58 @@ const firebaseConfig = {
   appId: "1:594686167676:web:77f7ee552c8ed1a4d997f9"
 };
 
+/* =========================
+   🚀 INICIALIZA FIREBASE
+========================= */
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-  
-/* 🚗 ID DO CARRO */
-const DEVICE_ID = "carro_01";
-
-/* 🎥 PLAYER */
-let videos = [
-"https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643064/Patelaria_bnnooc.mp4"
-];
-
-index = 0;
-carregarVideo();
-  
+/* =========================
+   🎬 PLAYER (EDITÁVEL)
+========================= */
+let videos = [];
 let index = 0;
 const player = document.getElementById("player");
 
-/* 🔄 ESCUTA FIREBASE */
-db.collection("devices").doc(DEVICE_ID)
-.onSnapshot(function(doc){
+/* =========================
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+========================= */
+function carregarVideo() {
+  if (videos.length === 0) return;
 
-  if(!doc.exists) return;
+  player.src = videos[index];
+  player.play();
 
+  player.onended = () => {
+    index = (index + 1) % videos.length;
+    carregarVideo();
+  };
+}
+
+/* =========================
+   🧪 TESTE LOCAL (REMOVE DEPOIS)
+========================= */
+videos = [
+  "https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643064/Patelaria_bnnooc.mp4"
+];
+
+carregarVideo();
+
+/* =========================
+   🔥 FIREBASE (DEPOIS ATIVA)
+========================= */
+/*
+db.collection("devices").doc("carro_01")
+.onSnapshot((doc) => {
   const data = doc.data();
 
-  if(data.status === "off"){
-    player.pause();
-    return;
-  }
-
-  videos = data.videos || [];
-
-  /* 🚀 INICIA PLAYER */
-  if(videos.length > 0){
+  if (data.status === "on") {
+    videos = data.videos;
     index = 0;
     carregarVideo();
   }
-
 });
-
-/* ▶️ CARREGAR VÍDEO */
-function carregarVideo(){
-
-  if(videos.length === 0) return;
-
-  player.src = videos[index];
-
-  player.play().catch(function(e){
-    console.log("Erro ao rodar:", e);
-  });
-
-}
-
-/* 🔄 LOOP */
-player.onended = function(){
-  index = (index + 1) % videos.length;
-  carregarVideo();
-};
-
-/* 🕒 INFO */
-function atualizarInfo(){
-  let agora = new Date();
-  document.getElementById("info").innerText =
-  "Bee DOOH • " + agora.toLocaleTimeString();
-}
-
-setInterval(atualizarInfo, 2000);
-
+*/
 </script>
 
 </body>
