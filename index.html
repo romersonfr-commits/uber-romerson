@@ -1,8 +1,92 @@
-<script>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Bee DOOH Player</title>
 
+  <!-- Firebase VERSÃO CORRETA -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+    }
+  </style>
+</head>
+
+<body>
+
+<video id="player" autoplay muted playsinline></video>
+
+<script>
+/* =========================
+   🔧 CONFIG FIREBASE (EDITÁVEL)
+========================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
+  authDomain: "bee-dooh.firebaseapp.com",
+  projectId: "bee-dooh",
+  storageBucket: "bee-dooh.firebasestorage.app",
+  messagingSenderId: "594686167676",
+  appId: "1:594686167676:web:77f7ee552c8ed1a4d997f9"
+};
+
+/* =========================
+   🚀 INICIALIZA FIREBASE
+========================= */
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* =========================
+   🎬 PLAYER (EDITÁVEL)
+========================= */
+let videos = [];
+let index = 0;
 const player = document.getElementById("player");
 
-player.src = "https://www.w3schools.com/html/mov_bbb.mp4";
-player.play();
+/* =========================
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+========================= */
+function carregarVideo() {
+  if (videos.length === 0) return;
+
+  player.src = videos[index];
+  player.play();
+
+  player.onended = () => {
+    index = (index + 1) % videos.length;
+    carregarVideo();
+  };
+}
+
+
+carregarVideo();
+
+/* =========================
+   🔥 FIREBASE (DEPOIS ATIVA)
+========================= */
+
+db.collection("devices").doc("carro_01")
+.onSnapshot((doc) => {
+  const data = doc.data();
+
+  if (data.status === "on") {
+    videos = data.videos;
+    index = 0;
+    carregarVideo();
+  }
+});
 
 </script>
+
+</body>
+</html>
