@@ -4,36 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Bee DOOH Player PRO</title>
+<title>Bee Player</title>
 
-<!-- 🔥 FIREBASE -->
+<!-- ✅ FIREBASE VERSÃO COMPATÍVEL -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <style>
-/* 🔧 CONFIGURAÇÃO VISUAL GERAL */
-body {
+body{
   margin:0;
   background:black;
-  overflow:hidden;
 }
 
-/* 🎥 PLAYER */
-#player {
+#player{
   width:100vw;
   height:100vh;
-  object-fit:cover; /* 👉 ALTERAR: cover / contain */
+  object-fit:cover;
 }
 
-/* 🔝 BARRA SUPERIOR */
-#topbar {
+#topbar{
   position:fixed;
   top:0;
   width:100%;
-  background:rgba(0,0,0,0.5); /* 👉 ALTERAR transparência */
+  background:rgba(0,0,0,0.5);
   color:white;
   padding:10px;
-  font-size:22px; /* 👉 ALTERAR tamanho texto */
 }
 </style>
 </head>
@@ -44,15 +39,11 @@ body {
   <span id="info">Carregando...</span>
 </div>
 
-<video id="player" autoplay muted></video>
+<video id="player" autoplay muted playsinline></video>
 
 <script>
 
-/* =========================
-   🔐 CONFIG FIREBASE
-   👉 COLE AQUI O SEU
-========================= */
-
+/* 🔐 COLE SUA CONFIG AQUI */
 const firebaseConfig = {
   apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
   authDomain: "bee-dooh.firebaseapp.com",
@@ -65,139 +56,64 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-/* =========================
-   🚗 IDENTIFICAÇÃO DO CARRO
-   👉 ALTERAR AQUI
-========================= */
-
+/* 🚗 ID DO CARRO */
 const DEVICE_ID = "carro_01";
 
-/* =========================
-   🎥 PLAYER
-========================= */
-
-let videos = ["https://res.cloudinary.com/dfe8shcvj/video/upload/f_mp4/v1774643064/Patelaria_bnnooc.mp4"];
+/* 🎥 PLAYER */
+let videos = [];
 let index = 0;
 const player = document.getElementById("player");
 
-/* 🔄 CARREGAR DADOS DO FIREBASE */
-function iniciarListener(){
+/* 🔄 ESCUTA FIREBASE */
+db.collection("devices").doc(DEVICE_ID)
+.onSnapshot(function(doc){
 
-  db.collection("devices").doc(DEVICE_ID)
-  .onSnapshot(doc => {
+  if(!doc.exists) return;
 
-    if(!doc.exists) return;
+  const data = doc.data();
 
-    const data = doc.data();
+  if(data.status === "off"){
+    player.pause();
+    return;
+  }
 
-    /* 🔥 LIGA / DESLIGA REMOTO */
-    if(data.status === "off"){
-      player.pause();
-      return;
-    }
+  videos = data.videos || [];
 
-    /* 🎥 ATUALIZA LISTA DE VÍDEOS */
-    videos = data.videos || [];
+  /* 🚀 INICIA PLAYER */
+  if(videos.length > 0){
+    index = 0;
+    carregarVideo();
+  }
 
-/* 🚀 FORÇA INÍCIO DO PLAYER */
-if(videos.length > 0){
-  index = 0;
-  carregarVideo();
-}
+});
 
-    /* 🏙️ ALTERAR CIDADE */
-    cidade = data.cidade || "Cidade";
-
-  });
-
-iniciarListener();
-
-/* ▶️ TROCAR VÍDEO */
+/* ▶️ CARREGAR VÍDEO */
 function carregarVideo(){
 
-  if(!videos || videos.length === 0) return;
+  if(videos.length === 0) return;
 
   player.src = videos[index];
 
-  player.play().catch(e => {
-    console.log("Erro ao rodar vídeo:", e);
+  player.play().catch(function(e){
+    console.log("Erro ao rodar:", e);
   });
 
 }
-  /* 📊 LOG DE EXECUÇÃO */
-  registrarLog(videos[index]);
-}
 
 /* 🔄 LOOP */
-player.onended = () => {
+player.onended = function(){
   index = (index + 1) % videos.length;
   carregarVideo();
 };
 
-/* 📊 ENVIAR LOG */
-function registrarLog(video){
-
-  db.collection("logs").add({
-    device: DEVICE_ID,
-    video: video,
-    data: new Date()
-  });
-}
-
-/* =========================
-   🌍 GEOLOCALIZAÇÃO
-========================= */
-
-let cidade = "Carregando...";
-
-navigator.geolocation.getCurrentPosition(pos => {
-
-  let lat = pos.coords.latitude;
-  let lon = pos.coords.longitude;
-
-  buscarClima(lat, lon);
-
-});
-
-/* =========================
-   🌦️ CLIMA DINÂMICO
-========================= */
-
-let temp = "--";
-let icon = "☀️";
-
-function buscarClima(lat, lon){
-
-  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
-  .then(r=>r.json())
-  .then(data=>{
-
-    temp = Math.round(data.current_weather.temperature);
-
-  });
-}
-
-/* =========================
-   🕒 INFO TOPO
-========================= */
-
+/* 🕒 INFO */
 function atualizarInfo(){
-
   let agora = new Date();
-
   document.getElementById("info").innerText =
-  `${cidade} • ${temp}°C • ${agora.toLocaleTimeString()} • Anuncie aqui`;
-
+  "Bee DOOH • " + agora.toLocaleTimeString();
 }
 
-setInterval(atualizarInfo, 3000);
-
-/* 🚀 INICIAR PLAYER */
-setInterval(()=>{
-  if(player.paused && videos.length > 0){
-    carregarVideo();
-  }
-},2000);
+setInterval(atualizarInfo, 2000);
 
 </script>
 
