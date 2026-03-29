@@ -75,7 +75,12 @@ carregarVideo();
    🔥 FIREBASE (DEPOIS ATIVA)
 ========================= */
 
-db.collection("devices").doc("carro_01")
+// 🔥 PEGA ID DA URL
+const urlParams = new URLSearchParams(window.location.search);
+const deviceId = urlParams.get("id") || "carro_01";
+
+// 🔥 USA O ID DINÂMICO
+db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
 
