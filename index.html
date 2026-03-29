@@ -99,6 +99,12 @@ function iniciarListener(){
     /* 🎥 ATUALIZA LISTA DE VÍDEOS */
     videos = data.videos || [];
 
+/* 🚀 FORÇA INÍCIO DO PLAYER */
+if(videos.length > 0){
+  index = 0;
+  carregarVideo();
+}
+
     /* 🏙️ ALTERAR CIDADE */
     cidade = data.cidade || "Cidade";
 
