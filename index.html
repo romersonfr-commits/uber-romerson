@@ -116,11 +116,15 @@ iniciarListener();
 /* ▶️ TROCAR VÍDEO */
 function carregarVideo(){
 
-  if(videos.length === 0) return;
+  if(!videos || videos.length === 0) return;
 
   player.src = videos[index];
-  player.play();
 
+  player.play().catch(e => {
+    console.log("Erro ao rodar vídeo:", e);
+  });
+
+}
   /* 📊 LOG DE EXECUÇÃO */
   registrarLog(videos[index]);
 }
