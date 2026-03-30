@@ -2,37 +2,125 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+
+  <!-- 🔥 TÍTULO DO PLAYER (EDITÁVEL) -->
   <title>Bee DOOH Player</title>
 
-  <!-- Firebase VERSÃO CORRETA -->
+  <!-- 🔥 CONTROLE DE CACHE (IMPORTANTE PARA ATUALIZAÇÃO AUTOMÁTICA) -->
+  <!-- Evita que o tablet fique mostrando versão antiga -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+  <!-- 🔥 FIREBASE (VERSÃO 8 - COMPATÍVEL COM SEU CÓDIGO) -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
   <style>
+    /* =========================
+       🎨 ESTILO GLOBAL (EDITÁVEL)
+    ========================= */
     body {
       margin: 0;
       background: black;
       overflow: hidden;
+      font-family: Arial, sans-serif;
     }
 
+    /* =========================
+       🎬 VÍDEO FULLSCREEN
+    ========================= */
     video {
       width: 100vw;
       height: 100vh;
       object-fit: cover;
     }
+
+    /* =========================
+       🧾 SLIDE DE TEXTO (ANÚNCIO)
+    ========================= */
+    #slideTexto {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+
+      background: rgba(0,0,0,0.8); /* fundo escuro */
+      color: white;
+      text-align: center;
+
+      opacity: 0; /* começa invisível */
+      z-index: 10;
+    }
+
+    /* =========================
+       ✨ ANIMAÇÕES (EDITÁVEL)
+    ========================= */
+    .fade-in {
+      animation: fadeInUp 1s ease;
+    }
+
+    .pulse {
+      animation: pulse 2s infinite;
+      color: yellow;
+      font-weight: bold;
+      font-size: 30px;
+      margin-top: 20px;
+    }
+
+    h1 {
+      font-size: 40px;
+      max-width: 80%;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
   </style>
 </head>
 
 <body>
 
+<!-- =========================
+     🎬 PLAYER DE VÍDEO
+========================= -->
 <video id="player" autoplay muted playsinline></video>
 
+<!-- =========================
+     🧾 SLIDE DE TEXTO
+     (USADO PARA "ANUNCIE AQUI")
+========================= -->
+<div id="slideTexto">
+  <h1 id="textoPrincipal"></h1>
+  <p class="pulse">ANUNCIE AQUI</p>
+</div>
+
 <script>
+
 /* =========================
    🔧 CONFIG FIREBASE (EDITÁVEL)
+   👉 Aqui conecta com seu projeto Firebase
 ========================= */
 const firebaseConfig = {
-  apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
+  apiKey: "SUA_API_KEY", // 🔥 você pode trocar se mudar projeto
   authDomain: "bee-dooh.firebaseapp.com",
   projectId: "bee-dooh",
   storageBucket: "bee-dooh.firebasestorage.app",
@@ -47,48 +135,119 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 /* =========================
-   🎬 PLAYER (EDITÁVEL)
+   🎬 VARIÁVEIS DO PLAYER
 ========================= */
-let videos = [];
+
+// lista geral de conteúdos (vídeos + textos)
+let playlist = [];
+
+// índice atual da reprodução
 let index = 0;
+
+// elemento de vídeo
 const player = document.getElementById("player");
 
+// elementos de texto
+const slideTexto = document.getElementById("slideTexto");
+const textoPrincipal = document.getElementById("textoPrincipal");
+
 /* =========================
-   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+   ▶️ FUNÇÃO PRINCIPAL DO PLAYER
+   👉 Decide se é vídeo ou texto
 ========================= */
-function carregarVideo() {
-  if (videos.length === 0) return;
+function rodarMidia() {
 
-  player.src = videos[index];
-  player.play();
+  if (playlist.length === 0) return;
 
-  player.onended = () => {
-    index = (index + 1) % videos.length;
-    carregarVideo();
-  };
+  const item = playlist[index];
+
+  /* =========================
+     🎬 SE FOR VÍDEO
+  ========================= */
+  if (item.tipo === "video") {
+
+    slideTexto.style.opacity = 0; // esconde texto
+    player.style.display = "block"; // mostra vídeo
+
+    player.src = item.url;
+    player.play();
+
+    player.onended = () => {
+      proximo();
+    };
+  }
+
+  /* =========================
+     🧾 SE FOR TEXTO
+  ========================= */
+  if (item.tipo === "texto") {
+
+    player.pause(); // pausa vídeo
+    player.style.display = "none"; // esconde vídeo
+
+    textoPrincipal.innerText = item.conteudo;
+
+    slideTexto.style.opacity = 1; // mostra texto
+
+    // ⏱ tempo do slide (EDITÁVEL)
+    setTimeout(() => {
+      proximo();
+    }, item.tempo || 6000); // padrão: 6 segundos
+  }
 }
 
-
-carregarVideo();
+/* =========================
+   🔄 PRÓXIMO ITEM
+========================= */
+function proximo() {
+  index = (index + 1) % playlist.length;
+  rodarMidia();
+}
 
 /* =========================
-   🔥 FIREBASE (DEPOIS ATIVA)
+   🔥 PEGA ID DO DISPOSITIVO
+   👉 MUITO IMPORTANTE PARA ESCALAR
 ========================= */
-
-// 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
+
+// você pode mudar o ID aqui manualmente também
 const deviceId = urlParams.get("id") || "carro_01";
 
-// 🔥 USA O ID DINÂMICO
+/* =========================
+   🔥 FIREBASE TEMPO REAL
+   👉 Atualiza automaticamente SEM RECARREGAR
+========================= */
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
+
   const data = doc.data();
 
-  if (data.status === "on") {
-    videos = data.videos;
-    index = 0;
-    carregarVideo();
+  /* =========================
+     🔌 STATUS DO DISPOSITIVO
+     👉 "on" ou "off"
+  ========================= */
+  if (data.status !== "on") {
+    player.pause();
+    return;
   }
+
+  /* =========================
+     📡 PLAYLIST DINÂMICA
+     👉 AQUI VOCÊ CONTROLA TUDO PELO FIREBASE
+  ========================= */
+
+  // exemplo esperado no Firebase:
+  /*
+  playlist: [
+    { tipo: "video", url: "video1.mp4" },
+    { tipo: "texto", conteudo: "Seu cliente está aqui", tempo: 6000 }
+  ]
+  */
+
+  playlist = data.playlist || [];
+
+  index = 0;
+  rodarMidia();
 });
 
 </script>
