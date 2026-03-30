@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Bee Player DOOH</title>
+  <title>Bee DOOH Player</title>
+
+  <!-- Firebase VERSÃO CORRETA -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
   <style>
-    /* ===== CONFIGURAÇÕES VISUAIS ===== */
-
     body {
       margin: 0;
       background: black;
@@ -16,133 +18,80 @@
     video {
       width: 100vw;
       height: 100vh;
-      object-fit: cover; /* 👉 altera para contain se quiser bordas */
-    }
-
-    #statusTela {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      background: red;
-      color: white;
-      text-align: center;
-      font-size: 20px;
-      padding: 10px;
-      display: none; /* 👉 aparece quando status = off */
-      z-index: 999;
+      object-fit: cover;
     }
   </style>
 </head>
+
 <body>
 
-  <!-- 🔴 Tela de status OFF -->
-  <div id="statusTela">TELA DESLIGADA</div>
+<video id="player" autoplay muted playsinline></video>
 
-  <!-- 🎬 Player de vídeo -->
-  <video id="player" autoplay muted></video>
+<script>
+/* =========================
+   🔧 CONFIG FIREBASE (EDITÁVEL)
+========================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
+  authDomain: "bee-dooh.firebaseapp.com",
+  projectId: "bee-dooh",
+  storageBucket: "bee-dooh.firebasestorage.app",
+  messagingSenderId: "594686167676",
+  appId: "1:594686167676:web:77f7ee552c8ed1a4d997f9"
+};
 
-  <script type="module">
-    // ===== IMPORTAÇÃO FIREBASE =====
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+/* =========================
+   🚀 INICIALIZA FIREBASE
+========================= */
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-    // ===== CONFIG FIREBASE =====
-    const firebaseConfig = {
-      apiKey: "SUA_API_KEY", // 🔴 ALTERAR
-      authDomain: "SEU_PROJETO.firebaseapp.com", // 🔴 ALTERAR
-      projectId: "SEU_PROJETO", // 🔴 ALTERAR
-    };
+/* =========================
+   🎬 PLAYER (EDITÁVEL)
+========================= */
+let videos = [];
+let index = 0;
+const player = document.getElementById("player");
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+/* =========================
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+========================= */
+function carregarVideo() {
+  if (videos.length === 0) return;
 
-    // ===== CONFIG DO DISPOSITIVO =====
-    const deviceId = "04"; 
-    // 🔴 ALTERAR AQUI se quiser outro dispositivo
-    // exemplo: "01", "carro_10", "tablet_barbearia"
+  player.src = videos[index];
+  player.play();
 
-    // ===== ELEMENTOS =====
-    const video = document.getElementById("player");
-    const statusTela = document.getElementById("statusTela");
+  player.onended = () => {
+    index = (index + 1) % videos.length;
+    carregarVideo();
+  };
+}
 
-    let listaVideos = [];
-    let index = 0;
 
-    // ===== FUNÇÃO PARA TOCAR VÍDEOS =====
-    function tocarProximoVideo() {
-      if (listaVideos.length === 0) return;
+carregarVideo();
 
-      video.src = listaVideos[index];
-      video.play();
+/* =========================
+   🔥 FIREBASE (DEPOIS ATIVA)
+========================= */
 
-      index++;
-      if (index >= listaVideos.length) {
-        index = 0; // 🔁 loop infinito
-      }
-    }
+// 🔥 PEGA ID DA URL
+const urlParams = new URLSearchParams(window.location.search);
+const deviceId = urlParams.get("id") || "carro_01";
 
-    // ===== QUANDO VÍDEO TERMINAR =====
-    video.addEventListener("ended", tocarProximoVideo);
+// 🔥 USA O ID DINÂMICO
+db.collection("devices").doc(deviceId)
+.onSnapshot((doc) => {
+  const data = doc.data();
 
-    // ===== FIREBASE TEMPO REAL =====
-    onSnapshot(doc(db, "devices", deviceId), (docSnap) => {
-      if (!docSnap.exists()) {
-        console.log("Documento não encontrado!");
-        return;
-      }
+  if (data.status === "on") {
+    videos = data.videos;
+    index = 0;
+    carregarVideo();
+  }
+});
 
-      const data = docSnap.data();
+</script>
 
-      console.log("Dados recebidos:", data);
-
-      // ================================
-      // 🔴 CONTROLE DE STATUS ON/OFF
-      // ================================
-      if (data.status === "off") {
-
-        console.log("Tela DESLIGADA");
-
-        video.pause(); // para o vídeo
-        video.src = ""; // limpa o player
-
-        statusTela.style.display = "block"; // mostra aviso
-
-        return; // 🚨 interrompe tudo aqui
-      }
-
-      // ================================
-      // 🟢 STATUS ON (FUNCIONANDO)
-      // ================================
-      statusTela.style.display = "none";
-
-      // ================================
-      // 🎬 LISTA DE VÍDEOS
-      // ================================
-      if (data.videos && Array.isArray(data.videos)) {
-
-        listaVideos = data.videos;
-
-        console.log("Lista de vídeos:", listaVideos);
-
-        index = 0; // 🔁 reinicia playlist
-        tocarProximoVideo();
-      }
-
-    });
-
-    // ================================
-    // 🔧 CONFIGURAÇÕES FUTURAS (IDEIAS)
-    // ================================
-
-    // 👉 Você pode adicionar no Firebase:
-    //
-    // data.volume = 0.5
-    // data.delay = 10
-    // data.tipo = "imagem"
-    //
-    // E controlar tudo aqui depois
-
-  </script>
 </body>
 </html>
