@@ -19,34 +19,21 @@
       width: 100vw;
       height: 100vh;
       object-fit: cover;
-    }
 
-    /* =========================
-       🎬 CROSSFADE (ADICIONADO)
-    ========================= */
-    #player, #player2 {
-      position: absolute;
-      top: 0;
-      left: 0;
-      opacity: 0;
-      transition: opacity 1s ease-in-out;
-    }
-
-    .ativo {
+      /* 🔥 FADE SEGURO */
       opacity: 1;
-      z-index: 2;
+      transition: opacity 0.8s ease-in-out;
     }
 
-    /* 🔥 GARANTE CAMADA BASE */
-    #player { z-index: 1; }
-    #player2 { z-index: 0; }
+    .fade-out {
+      opacity: 0;
+    }
   </style>
 </head>
 
 <body>
 
 <video id="player" autoplay muted playsinline></video>
-<video id="player2" muted playsinline></video>
 
 <script>
 /* =========================
@@ -75,13 +62,24 @@ let index = 0;
 const player = document.getElementById("player");
 
 /* =========================
-   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO (COM FADE)
 ========================= */
 function carregarVideo() {
   if (videos.length === 0) return;
 
-  player.src = videos[index];
-  player.play().catch(()=>{});
+  player.classList.add("fade-out");
+
+  setTimeout(() => {
+
+    player.src = videos[index];
+
+    player.play().catch(() => {
+      setTimeout(() => player.play(), 300);
+    });
+
+    player.classList.remove("fade-out");
+
+  }, 800);
 
   player.onended = () => {
     index = (index + 1) % videos.length;
@@ -92,43 +90,11 @@ function carregarVideo() {
 carregarVideo();
 
 /* =========================
-   🔥 FIREBASE (DEPOIS ATIVA)
+   🔥 FIREBASE
 ========================= */
 
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
-
-db.collection("devices").doc(deviceId)
-.onSnapshot((doc) => {
-  const data = doc.data();
-
-  if (data.status === "on") {
-    videos = data.videos;
-    index = 0;
-    carregarVideo();
-  }
-});
-
-
-/* =========================================================
-   🚀 SISTEMA PROFISSIONAL ADICIONADO (FULLY FIX)
-========================================================= */
-
-// 🚫 DESATIVA PLAYER ANTIGO
-player.onended = null;
-player.pause();
-
-const player2 = document.getElementById("player2");
-
-// 🔥 FORÇA AUTOPLAY NO FULLY
-[player, player2].forEach(v => {
-  v.muted = true;
-  v.autoplay = true;
-  v.playsInline = true;
-});
-
-let ativo = player;
-let proximo = player2;
 
 /* =========================
    💾 CACHE LOCAL (OFFLINE)
@@ -144,70 +110,20 @@ function carregarCache() {
   }
 }
 
-/* =========================
-   🔄 CROSSFADE REAL (FULLY)
-========================= */
-function tocarComCrossfade() {
-  if (videos.length === 0) return;
-
-  const urlAtual = videos[index];
-  const proximoIndex = (index + 1) % videos.length;
-
-  proximo.src = urlAtual;
-  proximo.load();
-
-  // 🔥 FORÇA PLAY (ESSENCIAL FULLY)
-  setTimeout(() => {
-    proximo.play().catch(()=>{});
-  }, 200);
-
-  // 🔥 EVENTO COMPATÍVEL
-  proximo.onloadeddata = () => {
-
-    proximo.classList.add("ativo");
-    ativo.classList.remove("ativo");
-
-    setTimeout(() => {
-      ativo.pause();
-
-      const temp = ativo;
-      ativo = proximo;
-      proximo = temp;
-
-      index = proximoIndex;
-
-      tocarComCrossfade();
-    }, 1000);
-  };
-
-  /* =========================
-     ❌ FALLBACK AUTOMÁTICO
-  ========================= */
-  proximo.onerror = () => {
-    index = proximoIndex;
-    tocarComCrossfade();
-  };
-}
-
-/* =========================
-   🔌 INICIA SISTEMA
-========================= */
-
+// 🔥 CARREGA CACHE PRIMEIRO
 carregarCache();
 
-// 🔥 INICIALIZAÇÃO FORÇADA (CRÍTICO FULLY)
+// 🔥 PRIMEIRO PLAY FORÇADO (FULLY)
 setTimeout(() => {
   if (videos.length > 0) {
-    ativo.src = videos[0];
-    ativo.classList.add("ativo");
-
-    ativo.play().catch(() => {
-      setTimeout(() => ativo.play(), 300);
+    player.src = videos[0];
+    player.play().catch(() => {
+      setTimeout(() => player.play(), 500);
     });
   }
-}, 800);
+}, 1000);
 
-// Firebase inicia sistema avançado
+// 🔥 FIREBASE
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
@@ -220,7 +136,7 @@ db.collection("devices").doc(deviceId)
     index = 0;
 
     setTimeout(() => {
-      tocarComCrossfade();
+      carregarVideo();
     }, 1000);
   }
 });
