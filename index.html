@@ -4,10 +4,7 @@
   <meta charset="UTF-8">
   <title>Bee DOOH Player</title>
 
-  <!-- 🔥 EVITA CACHE (IMPORTANTE NO TABLET / FULLY KIOSK) -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-
-  <!-- Firebase VERSÃO CORRETA -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -16,73 +13,23 @@
       margin: 0;
       background: black;
       overflow: hidden;
-      font-family: Arial, sans-serif;
     }
 
-    /* 🎬 VÍDEO */
     video {
       width: 100vw;
       height: 100vh;
       object-fit: cover;
-    }
-
-    /* 🧾 SLIDE DE TEXTO */
-    #slideTexto {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      top: 0;
-      left: 0;
-
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-
-      background: rgba(0,0,0,0.85);
-      color: white;
-      text-align: center;
-
-      opacity: 0;
-      z-index: 10;
-    }
-
-    h1 {
-      font-size: 40px;
-      max-width: 80%;
-    }
-
-    .pulse {
-      margin-top: 20px;
-      font-size: 28px;
-      color: yellow;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
     }
   </style>
 </head>
 
 <body>
 
-<!-- 🎬 PLAYER -->
 <video id="player" autoplay muted playsinline></video>
 
-<!-- 🧾 TEXTO -->
-<div id="slideTexto">
-  <h1 id="texto"></h1>
-  <div class="pulse">ANUNCIE AQUI</div>
-</div>
-
 <script>
-
 /* =========================
-   🔧 CONFIG FIREBASE (EDITÁVEL)
-   👉 Se trocar de projeto, altere aqui
+   🔧 CONFIG FIREBASE
 ========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
@@ -100,121 +47,60 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 /* =========================
-   🎬 VARIÁVEIS DO PLAYER
+   🎬 PLAYER
 ========================= */
-
-// 🔥 Aceita DOIS formatos:
-// 1. antigo → videos: ["url1", "url2"]
-// 2. novo → playlist: [{tipo: "video"}, {tipo: "texto"}]
-let playlist = [];
-
+let videos = [];
 let index = 0;
-
 const player = document.getElementById("player");
-const slideTexto = document.getElementById("slideTexto");
-const texto = document.getElementById("texto");
 
 /* =========================
-   ▶️ FUNÇÃO PRINCIPAL
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO
 ========================= */
-function rodar() {
+function carregarVideo() {
+  if (videos.length === 0) return;
 
-  if (playlist.length === 0) {
-    console.log("⚠️ Playlist vazia");
-    return;
-  }
+  player.src = videos[index];
 
-  const item = playlist[index];
+  player.play().catch(err => {
+    console.log("Erro ao dar play:", err);
+  });
 
-  /* 🎬 VÍDEO */
-  if (item.tipo === "video") {
-
-    slideTexto.style.opacity = 0;
-    player.style.display = "block";
-
-    player.src = item.url;
-
-    player.play().catch(err => {
-      console.log("Erro autoplay:", err);
-    });
-
-    player.onended = proximo;
-  }
-
-  /* 🧾 TEXTO */
-  else if (item.tipo === "texto") {
-
-    player.pause();
-    player.style.display = "none";
-
-    texto.innerText = item.conteudo || "Anuncie aqui";
-
-    slideTexto.style.opacity = 1;
-
-    setTimeout(proximo, item.tempo || 6000);
-  }
+  player.onended = () => {
+    index = (index + 1) % videos.length;
+    carregarVideo();
+  };
 }
 
 /* =========================
-   🔄 PRÓXIMO ITEM
+   🔥 FIREBASE REALTIME
 ========================= */
-function proximo() {
-  index = (index + 1) % playlist.length;
-  rodar();
-}
 
-/* =========================
-   🔥 ID DO DISPOSITIVO (EDITÁVEL)
-   👉 permite controlar vários carros
-========================= */
+// 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
-/* =========================
-   🔥 FIREBASE TEMPO REAL
-========================= */
+// 🔥 ESCUTA ALTERAÇÕES
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
 
-  if (!doc.exists) {
-    console.log("❌ Documento não encontrado");
-    return;
-  }
-
   const data = doc.data();
 
-  /* 🔌 STATUS */
-  if (data.status !== "on") {
-    player.pause();
-    return;
+  // 🔥 segurança
+  if (!data) return;
+
+  // 🔥 só roda se estiver ON
+  if (data.status === "on" && data.playlist) {
+
+    // 🔥 converte playlist → lista de vídeos
+    videos = data.playlist
+      .filter(item => item.tipo === "video" && item.url)
+      .map(item => item.url);
+
+    index = 0;
+    carregarVideo();
   }
 
-  /* =========================
-     🧠 COMPATIBILIDADE INTELIGENTE
-  ========================= */
-
-  // 👉 NOVO FORMATO (RECOMENDADO)
-  if (data.playlist) {
-    playlist = data.playlist;
-  }
-
-  // 👉 FORMATO ANTIGO (SEU ATUAL)
-  else if (data.videos) {
-    playlist = data.videos.map(url => ({
-      tipo: "video",
-      url: url
-    }));
-  }
-
-  else {
-    console.log("⚠️ Nenhum conteúdo encontrado");
-    return;
-  }
-
-  index = 0;
-  rodar();
 });
-
 </script>
 
 </body>
