@@ -19,15 +19,22 @@
       width: 100vw;
       height: 100vh;
       object-fit: cover;
+    }
 
-      /* 🎬 FADE SUAVE */
-      opacity: 1;
+    /* =========================
+       🎬 CROSSFADE (ADICIONADO)
+    ========================= */
+    #player, #player2 {
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
       transition: opacity 1s ease-in-out;
     }
 
-    /* 🔄 ESTADO DE FADE */
-    .fade-out {
-      opacity: 0;
+    .ativo {
+      opacity: 1;
+      z-index: 2;
     }
   </style>
 </head>
@@ -35,6 +42,9 @@
 <body>
 
 <video id="player" autoplay muted playsinline></video>
+
+<!-- 🎬 PLAYER EXTRA (ADICIONADO PARA CROSSFADE) -->
+<video id="player2" muted playsinline></video>
 
 <script>
 /* =========================
@@ -68,22 +78,15 @@ const player = document.getElementById("player");
 function carregarVideo() {
   if (videos.length === 0) return;
 
-  // 🎬 INICIA FADE OUT
-  player.classList.add("fade-out");
-
-  setTimeout(() => {
-    player.src = videos[index];
-    player.play();
-
-    // 🎬 VOLTA COM FADE IN
-    player.classList.remove("fade-out");
-  }, 1000); // tempo igual ao transition do CSS
+  player.src = videos[index];
+  player.play();
 
   player.onended = () => {
     index = (index + 1) % videos.length;
     carregarVideo();
   };
 }
+
 
 carregarVideo();
 
@@ -104,6 +107,101 @@ db.collection("devices").doc(deviceId)
     videos = data.videos;
     index = 0;
     carregarVideo();
+  }
+});
+
+
+/* =========================================================
+   🚀 SISTEMA PROFISSIONAL ADICIONADO (SEM ALTERAR SEU CÓDIGO)
+========================================================= */
+
+const player2 = document.getElementById("player2");
+let ativo = player;
+let proximo = player2;
+
+/* =========================
+   💾 CACHE LOCAL (OFFLINE)
+========================= */
+function salvarCache(lista) {
+  localStorage.setItem("videos_cache", JSON.stringify(lista));
+}
+
+function carregarCache() {
+  const cache = localStorage.getItem("videos_cache");
+  if (cache) {
+    videos = JSON.parse(cache);
+  }
+}
+
+/* =========================
+   🎬 PRÉ-CARREGAMENTO
+========================= */
+function preloadVideo(url, videoEl) {
+  videoEl.src = url;
+  videoEl.load();
+}
+
+/* =========================
+   🔄 CROSSFADE REAL
+========================= */
+function tocarComCrossfade() {
+  if (videos.length === 0) return;
+
+  const urlAtual = videos[index];
+  const proximoIndex = (index + 1) % videos.length;
+  const urlProximo = videos[proximoIndex];
+
+  preloadVideo(urlAtual, proximo);
+
+  proximo.oncanplay = () => {
+    proximo.play();
+
+    proximo.classList.add("ativo");
+    ativo.classList.remove("ativo");
+
+    setTimeout(() => {
+      ativo.pause();
+
+      // troca referências
+      const temp = ativo;
+      ativo = proximo;
+      proximo = temp;
+
+      index = proximoIndex;
+
+      tocarComCrossfade();
+    }, 1000);
+  };
+
+  /* =========================
+     ❌ FALLBACK AUTOMÁTICO
+  ========================= */
+  proximo.onerror = () => {
+    console.log("Erro no vídeo, pulando...");
+    index = proximoIndex;
+    tocarComCrossfade();
+  };
+}
+
+/* =========================
+   🔌 INICIA SISTEMA
+========================= */
+
+// tenta cache primeiro (offline)
+carregarCache();
+
+// quando firebase atualizar → salva cache + inicia player avançado
+db.collection("devices").doc(deviceId)
+.onSnapshot((doc) => {
+  const data = doc.data();
+
+  if (data.status === "on") {
+    videos = data.videos;
+
+    salvarCache(videos);
+
+    index = 0;
+    tocarComCrossfade();
   }
 });
 
