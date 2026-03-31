@@ -62,16 +62,72 @@ let index = 0;
 const player = document.getElementById("player");
 
 /* =========================
-   ▶️ FUNÇÃO DE CARREGAR VÍDEO (COM FADE)
+   💾 CACHE REAL (INDEXEDDB)
 ========================= */
-function carregarVideo() {
+const DB_NAME = "bee_videos";
+const STORE_NAME = "videos";
+
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE_NAME);
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = reject;
+  });
+}
+
+async function salvarVideo(url) {
+  try {
+    const db = await abrirDB();
+    const res = await fetch(url);
+    const blob = await res.blob();
+
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(blob, url);
+  } catch (e) {
+    console.log("Erro ao salvar vídeo:", e);
+  }
+}
+
+async function pegarVideo(url) {
+  const db = await abrirDB();
+
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).get(url);
+
+    req.onsuccess = () => {
+      if (req.result) {
+        resolve(URL.createObjectURL(req.result));
+      } else {
+        resolve(null);
+      }
+    };
+  });
+}
+
+/* =========================
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO (COM FADE + OFFLINE)
+========================= */
+async function carregarVideo() {
   if (videos.length === 0) return;
 
   player.classList.add("fade-out");
 
-  setTimeout(() => {
+  setTimeout(async () => {
 
-    player.src = videos[index];
+    let local = await pegarVideo(videos[index]);
+
+    if (!local) {
+      await salvarVideo(videos[index]);
+      local = await pegarVideo(videos[index]);
+    }
+
+    player.src = local || videos[index];
 
     player.play().catch(() => {
       setTimeout(() => player.play(), 300);
@@ -97,7 +153,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
 /* =========================
-   💾 CACHE LOCAL (OFFLINE)
+   💾 CACHE LOCAL (LISTA)
 ========================= */
 function salvarCache(lista) {
   localStorage.setItem("videos_cache", JSON.stringify(lista));
@@ -112,6 +168,35 @@ function carregarCache() {
 
 // 🔥 CARREGA CACHE PRIMEIRO
 carregarCache();
+
+/* =========================
+   🛡️ WATCHDOG (ANTI-TRAVAMENTO)
+========================= */
+let ultimoTempo = 0;
+
+setInterval(() => {
+  if (!player.paused) {
+    if (player.currentTime === ultimoTempo) {
+      console.log("Travou! Reiniciando...");
+      player.load();
+      player.play().catch(()=>{});
+    }
+    ultimoTempo = player.currentTime;
+  }
+}, 5000);
+
+/* =========================
+   📡 STATUS DO DISPOSITIVO
+========================= */
+function enviarStatus() {
+  db.collection("devices").doc(deviceId).set({
+    online: true,
+    lastSeen: new Date().toISOString(),
+    videoAtual: videos[index] || null
+  }, { merge: true });
+}
+
+setInterval(enviarStatus, 10000);
 
 // 🔥 PRIMEIRO PLAY FORÇADO (FULLY)
 setTimeout(() => {
