@@ -46,8 +46,6 @@
 <body>
 
 <video id="player" autoplay muted playsinline></video>
-
-<!-- 🎬 PLAYER EXTRA (ADICIONADO PARA CROSSFADE) -->
 <video id="player2" muted playsinline></video>
 
 <script>
@@ -97,11 +95,9 @@ carregarVideo();
    🔥 FIREBASE (DEPOIS ATIVA)
 ========================= */
 
-// 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
-// 🔥 USA O ID DINÂMICO
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
@@ -115,7 +111,7 @@ db.collection("devices").doc(deviceId)
 
 
 /* =========================================================
-   🚀 SISTEMA PROFISSIONAL ADICIONADO (SEM ALTERAR SEU CÓDIGO)
+   🚀 SISTEMA PROFISSIONAL ADICIONADO (FULLY FIX)
 ========================================================= */
 
 // 🚫 DESATIVA PLAYER ANTIGO
@@ -124,10 +120,12 @@ player.pause();
 
 const player2 = document.getElementById("player2");
 
-// 🔥 GARANTE AUTOPLAY NO ANDROID
-player2.muted = true;
-player2.autoplay = true;
-player2.playsInline = true;
+// 🔥 FORÇA AUTOPLAY NO FULLY
+[player, player2].forEach(v => {
+  v.muted = true;
+  v.autoplay = true;
+  v.playsInline = true;
+});
 
 let ativo = player;
 let proximo = player2;
@@ -147,7 +145,7 @@ function carregarCache() {
 }
 
 /* =========================
-   🔄 CROSSFADE REAL
+   🔄 CROSSFADE REAL (FULLY)
 ========================= */
 function tocarComCrossfade() {
   if (videos.length === 0) return;
@@ -158,11 +156,13 @@ function tocarComCrossfade() {
   proximo.src = urlAtual;
   proximo.load();
 
-  proximo.oncanplaythrough = () => {
+  // 🔥 FORÇA PLAY (ESSENCIAL FULLY)
+  setTimeout(() => {
+    proximo.play().catch(()=>{});
+  }, 200);
 
-    proximo.play().catch(() => {
-      setTimeout(() => proximo.play(), 300);
-    });
+  // 🔥 EVENTO COMPATÍVEL
+  proximo.onloadeddata = () => {
 
     proximo.classList.add("ativo");
     ativo.classList.remove("ativo");
@@ -184,7 +184,6 @@ function tocarComCrossfade() {
      ❌ FALLBACK AUTOMÁTICO
   ========================= */
   proximo.onerror = () => {
-    console.log("Erro no vídeo, pulando...");
     index = proximoIndex;
     tocarComCrossfade();
   };
@@ -194,19 +193,21 @@ function tocarComCrossfade() {
    🔌 INICIA SISTEMA
 ========================= */
 
-// tenta cache primeiro (offline)
 carregarCache();
 
-// 🔥 PRIMEIRO FRAME VISÍVEL (ESSENCIAL)
+// 🔥 INICIALIZAÇÃO FORÇADA (CRÍTICO FULLY)
 setTimeout(() => {
   if (videos.length > 0) {
     ativo.src = videos[0];
     ativo.classList.add("ativo");
-    ativo.play().catch(()=>{});
-  }
-}, 500);
 
-// quando firebase atualizar → salva cache + inicia player avançado
+    ativo.play().catch(() => {
+      setTimeout(() => ativo.play(), 300);
+    });
+  }
+}, 800);
+
+// Firebase inicia sistema avançado
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
@@ -217,7 +218,10 @@ db.collection("devices").doc(deviceId)
     salvarCache(videos);
 
     index = 0;
-    tocarComCrossfade();
+
+    setTimeout(() => {
+      tocarComCrossfade();
+    }, 1000);
   }
 });
 
