@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Bee DOOH Player</title>
 
-  <!-- Firebase VERSÃO CORRETA -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -16,20 +16,31 @@
     }
 
     video {
+      position: absolute; /* 🔥 permite sobreposição */
       width: 100vw;
       height: 100vh;
       object-fit: cover;
+
+      opacity: 0;
+      transition: opacity 1s ease-in-out; /* 🔥 velocidade da transição */
+    }
+
+    /* 🔥 vídeo ativo visível */
+    video.ativo {
+      opacity: 1;
     }
   </style>
 </head>
 
 <body>
 
-<video id="player" autoplay muted playsinline></video>
+<!-- 🔥 DOIS PLAYERS (Netflix real) -->
+<video id="player1" muted playsinline></video>
+<video id="player2" muted playsinline></video>
 
 <script>
 /* =========================
-   🔧 CONFIG FIREBASE (EDITÁVEL)
+   🔧 CONFIG FIREBASE
 ========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
@@ -47,50 +58,83 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 /* =========================
-   🎬 PLAYER (EDITÁVEL)
+   🎬 PLAYER
 ========================= */
 let videos = [];
 let index = 0;
-const player = document.getElementById("player");
+
+/* 🔥 DOIS PLAYERS */
+const player1 = document.getElementById("player1");
+const player2 = document.getElementById("player2");
+
+let ativo = player1;
+let proximo = player2;
 
 /* =========================
-   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO (NETFLIX REAL)
 ========================= */
 function carregarVideo() {
   if (videos.length === 0) return;
 
-  player.src = videos[index];
-  player.play();
+  // 🔥 define próximo vídeo
+  proximo.src = videos[index];
 
-  player.onended = () => {
+  proximo.onloadeddata = () => {
+
+    // ▶️ inicia próximo vídeo
+    proximo.play().catch(err => {
+      console.log("Erro ao dar play:", err);
+    });
+
+    // 🔥 entra suave
+    proximo.classList.add("ativo");
+
+    // 🔥 sai suave
+    ativo.classList.remove("ativo");
+
+    // 🔄 troca players
+    [ativo, proximo] = [proximo, ativo];
+
+    // 🔁 próximo índice
     index = (index + 1) % videos.length;
-    carregarVideo();
+
+    // ⏱️ quando terminar, chama o próximo
+    ativo.onended = () => {
+      carregarVideo();
+    };
   };
 }
 
-
-carregarVideo();
-
 /* =========================
-   🔥 FIREBASE (DEPOIS ATIVA)
+   🔥 FIREBASE REALTIME
 ========================= */
 
 // 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
-// 🔥 USA O ID DINÂMICO
+// 🔥 ESCUTA ALTERAÇÕES
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
+
   const data = doc.data();
 
-  if (data.status === "on") {
-    videos = data.videos;
+  // 🔥 segurança
+  if (!data) return;
+
+  // 🔥 só roda se estiver ON
+  if (data.status === "on" && data.playlist) {
+
+    // 🔥 converte playlist → lista de vídeos
+    videos = data.playlist
+      .filter(item => item.tipo === "video" && item.url)
+      .map(item => item.url);
+
     index = 0;
     carregarVideo();
   }
-});
 
+});
 </script>
 
 </body>
