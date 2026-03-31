@@ -36,6 +36,10 @@
       opacity: 1;
       z-index: 2;
     }
+
+    /* 🔥 GARANTE CAMADA BASE */
+    #player { z-index: 1; }
+    #player2 { z-index: 0; }
   </style>
 </head>
 
@@ -79,14 +83,13 @@ function carregarVideo() {
   if (videos.length === 0) return;
 
   player.src = videos[index];
-  player.play();
+  player.play().catch(()=>{});
 
   player.onended = () => {
     index = (index + 1) % videos.length;
     carregarVideo();
   };
 }
-
 
 carregarVideo();
 
@@ -118,7 +121,14 @@ db.collection("devices").doc(deviceId)
 // 🚫 DESATIVA PLAYER ANTIGO
 player.onended = null;
 player.pause();
+
 const player2 = document.getElementById("player2");
+
+// 🔥 GARANTE AUTOPLAY NO ANDROID
+player2.muted = true;
+player2.autoplay = true;
+player2.playsInline = true;
+
 let ativo = player;
 let proximo = player2;
 
@@ -137,14 +147,6 @@ function carregarCache() {
 }
 
 /* =========================
-   🎬 PRÉ-CARREGAMENTO
-========================= */
-function preloadVideo(url, videoEl) {
-  videoEl.src = url;
-  videoEl.load();
-}
-
-/* =========================
    🔄 CROSSFADE REAL
 ========================= */
 function tocarComCrossfade() {
@@ -152,13 +154,15 @@ function tocarComCrossfade() {
 
   const urlAtual = videos[index];
   const proximoIndex = (index + 1) % videos.length;
-  const urlProximo = videos[proximoIndex];
 
- proximo.src = urlAtual;
-proximo.load();
+  proximo.src = urlAtual;
+  proximo.load();
 
-proximo.oncanplaythrough = () => {
-    proximo.play();
+  proximo.oncanplaythrough = () => {
+
+    proximo.play().catch(() => {
+      setTimeout(() => proximo.play(), 300);
+    });
 
     proximo.classList.add("ativo");
     ativo.classList.remove("ativo");
@@ -166,7 +170,6 @@ proximo.oncanplaythrough = () => {
     setTimeout(() => {
       ativo.pause();
 
-      // troca referências
       const temp = ativo;
       ativo = proximo;
       proximo = temp;
@@ -193,6 +196,15 @@ proximo.oncanplaythrough = () => {
 
 // tenta cache primeiro (offline)
 carregarCache();
+
+// 🔥 PRIMEIRO FRAME VISÍVEL (ESSENCIAL)
+setTimeout(() => {
+  if (videos.length > 0) {
+    ativo.src = videos[0];
+    ativo.classList.add("ativo");
+    ativo.play().catch(()=>{});
+  }
+}, 500);
 
 // quando firebase atualizar → salva cache + inicia player avançado
 db.collection("devices").doc(deviceId)
