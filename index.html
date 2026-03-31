@@ -19,13 +19,10 @@
       width: 100vw;
       height: 100vh;
       object-fit: cover;
-
-      /* 🎬 FADE SUAVE */
       opacity: 1;
-      transition: opacity 1s ease-in-out;
+      transition: opacity 0.8s ease-in-out;
     }
 
-    /* 🔄 ESTADO DE FADE */
     .fade-out {
       opacity: 0;
     }
@@ -38,7 +35,7 @@
 
 <script>
 /* =========================
-   🔧 CONFIG FIREBASE (EDITÁVEL)
+   🔧 CONFIG FIREBASE
 ========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
@@ -49,35 +46,161 @@ const firebaseConfig = {
   appId: "1:594686167676:web:77f7ee552c8ed1a4d997f9"
 };
 
-/* =========================
-   🚀 INICIALIZA FIREBASE
-========================= */
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 /* =========================
-   🎬 PLAYER (EDITÁVEL)
+   🎬 PLAYER
 ========================= */
-let videos = [];
+let videos = [];       // lista final (filtrada)
+let videosGeo = [];    // lista original com geo
 let index = 0;
 const player = document.getElementById("player");
 
 /* =========================
-   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+   📏 DISTÂNCIA (HAVERSINE)
 ========================= */
-function carregarVideo() {
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI/180) *
+    Math.cos(lat2 * Math.PI/180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return R * c;
+}
+
+/* =========================
+   📍 FILTRO GEO
+========================= */
+function aplicarGeo(latAtual, lngAtual) {
+
+  let permitidos = [];
+
+  videosGeo.forEach(v => {
+
+    // 🎯 SEM GEO = RODA SEMPRE (fallback)
+    if (!v.lat) {
+      permitidos.push(v.url || v);
+      return;
+    }
+
+    const distancia = calcularDistancia(latAtual, lngAtual, v.lat, v.lng);
+
+    if (distancia <= (v.raio || 3000)) {
+      permitidos.push(v.url);
+    }
+
+  });
+
+  // evita trocar toda hora sem necessidade
+  if (permitidos.length > 0 && JSON.stringify(permitidos) !== JSON.stringify(videos)) {
+    videos = permitidos;
+    index = 0;
+    carregarVideo();
+  }
+}
+
+/* =========================
+   📡 GEOLOCALIZAÇÃO
+========================= */
+navigator.geolocation.watchPosition((pos) => {
+
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
+
+  aplicarGeo(lat, lng);
+
+}, (err) => {
+  console.log("Erro GPS:", err);
+}, {
+  enableHighAccuracy: true,
+  maximumAge: 5000,
+  timeout: 10000
+});
+
+/* =========================
+   💾 CACHE (INDEXEDDB)
+========================= */
+const DB_NAME = "bee_videos";
+const STORE_NAME = "videos";
+
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE_NAME);
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = reject;
+  });
+}
+
+async function salvarVideo(url) {
+  try {
+    const db = await abrirDB();
+    const res = await fetch(url);
+    const blob = await res.blob();
+
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(blob, url);
+  } catch (e) {
+    console.log("Erro ao salvar vídeo:", e);
+  }
+}
+
+async function pegarVideo(url) {
+  const db = await abrirDB();
+
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).get(url);
+
+    req.onsuccess = () => {
+      if (req.result) {
+        resolve(URL.createObjectURL(req.result));
+      } else {
+        resolve(null);
+      }
+    };
+  });
+}
+
+/* =========================
+   ▶️ PLAYER COM CACHE + FADE
+========================= */
+async function carregarVideo() {
   if (videos.length === 0) return;
 
-  // 🎬 INICIA FADE OUT
   player.classList.add("fade-out");
 
-  setTimeout(() => {
-    player.src = videos[index];
-    player.play();
+  setTimeout(async () => {
 
-    // 🎬 VOLTA COM FADE IN
+    let local = await pegarVideo(videos[index]);
+
+    if (!local) {
+      await salvarVideo(videos[index]);
+      local = await pegarVideo(videos[index]);
+    }
+
+    player.src = local || videos[index];
+
+    player.play().catch(() => {
+      setTimeout(() => player.play(), 300);
+    });
+
     player.classList.remove("fade-out");
-  }, 1000); // tempo igual ao transition do CSS
+
+  }, 800);
 
   player.onended = () => {
     index = (index + 1) % videos.length;
@@ -85,28 +208,69 @@ function carregarVideo() {
   };
 }
 
-carregarVideo();
-
 /* =========================
-   🔥 FIREBASE (DEPOIS ATIVA)
+   🔥 FIREBASE
 ========================= */
-
-// 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
-// 🔥 USA O ID DINÂMICO
+function salvarCache(lista) {
+  localStorage.setItem("videos_cache", JSON.stringify(lista));
+}
+
+function carregarCache() {
+  const cache = localStorage.getItem("videos_cache");
+  if (cache) {
+    videos = JSON.parse(cache);
+  }
+}
+
+carregarCache();
+
+/* =========================
+   🛡️ WATCHDOG
+========================= */
+let ultimoTempo = 0;
+
+setInterval(() => {
+  if (!player.paused) {
+    if (player.currentTime === ultimoTempo) {
+      player.load();
+      player.play().catch(()=>{});
+    }
+    ultimoTempo = player.currentTime;
+  }
+}, 5000);
+
+/* =========================
+   📡 STATUS
+========================= */
+function enviarStatus() {
+  db.collection("devices").doc(deviceId).set({
+    online: true,
+    lastSeen: new Date().toISOString(),
+    videoAtual: videos[index] || null
+  }, { merge: true });
+}
+
+setInterval(enviarStatus, 10000);
+
+/* =========================
+   🔥 FIREBASE LISTENER
+========================= */
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
+
   const data = doc.data();
 
   if (data.status === "on") {
-    videos = data.videos;
-    index = 0;
-    carregarVideo();
+
+    videosGeo = data.videos; // 🔥 AQUI É A CHAVE
+
+    salvarCache(videosGeo);
+
   }
 });
-
 </script>
 
 </body>
