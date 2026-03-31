@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Bee DOOH Player</title>
 
-  <!-- Firebase -->
+  <!-- Firebase VERSÃO CORRETA -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -29,7 +29,7 @@
 
 <script>
 /* =========================
-   🔧 CONFIG FIREBASE
+   🔧 CONFIG FIREBASE (EDITÁVEL)
 ========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
@@ -47,7 +47,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 /* =========================
-   🎬 PLAYER
+   🎬 PLAYER (EDITÁVEL)
 ========================= */
 let videos = [];
 let index = 0;
@@ -60,10 +60,7 @@ function carregarVideo() {
   if (videos.length === 0) return;
 
   player.src = videos[index];
-
-  player.play().catch(err => {
-    console.log("Erro ao dar play:", err);
-  });
+  player.play();
 
   player.onended = () => {
     index = (index + 1) % videos.length;
@@ -71,36 +68,29 @@ function carregarVideo() {
   };
 }
 
+
+carregarVideo();
+
 /* =========================
-   🔥 FIREBASE REALTIME
+   🔥 FIREBASE (DEPOIS ATIVA)
 ========================= */
 
 // 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
-// 🔥 ESCUTA ALTERAÇÕES
+// 🔥 USA O ID DINÂMICO
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
-
   const data = doc.data();
 
-  // 🔥 segurança
-  if (!data) return;
-
-  // 🔥 só roda se estiver ON
-  if (data.status === "on" && data.playlist) {
-
-    // 🔥 converte playlist → lista de vídeos
-    videos = data.playlist
-      .filter(item => item.tipo === "video" && item.url)
-      .map(item => item.url);
-
+  if (data.status === "on") {
+    videos = data.videos;
     index = 0;
     carregarVideo();
   }
-
 });
+
 </script>
 
 </body>
