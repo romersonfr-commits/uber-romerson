@@ -115,6 +115,9 @@ db.collection("devices").doc(deviceId)
    🚀 SISTEMA PROFISSIONAL ADICIONADO (SEM ALTERAR SEU CÓDIGO)
 ========================================================= */
 
+// 🚫 DESATIVA PLAYER ANTIGO
+player.onended = null;
+player.pause();
 const player2 = document.getElementById("player2");
 let ativo = player;
 let proximo = player2;
@@ -151,9 +154,10 @@ function tocarComCrossfade() {
   const proximoIndex = (index + 1) % videos.length;
   const urlProximo = videos[proximoIndex];
 
-  preloadVideo(urlAtual, proximo);
+ proximo.src = urlAtual;
+proximo.load();
 
-  proximo.oncanplay = () => {
+proximo.oncanplaythrough = () => {
     proximo.play();
 
     proximo.classList.add("ativo");
