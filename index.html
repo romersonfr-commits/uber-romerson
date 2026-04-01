@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Bee DOOH Player</title>
 
-  <!-- Firebase -->
+  <!-- Firebase VERSÃO CORRETA -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -20,10 +20,12 @@
       height: 100vh;
       object-fit: cover;
 
+      /* 🎬 FADE SUAVE */
       opacity: 1;
-      transition: opacity 0.8s ease-in-out;
+      transition: opacity 1s ease-in-out;
     }
 
+    /* 🔄 ESTADO DE FADE */
     .fade-out {
       opacity: 0;
     }
@@ -36,7 +38,7 @@
 
 <script>
 /* =========================
-   🔧 CONFIG FIREBASE
+   🔧 CONFIG FIREBASE (EDITÁVEL)
 ========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
@@ -47,194 +49,64 @@ const firebaseConfig = {
   appId: "1:594686167676:web:77f7ee552c8ed1a4d997f9"
 };
 
+/* =========================
+   🚀 INICIALIZA FIREBASE
+========================= */
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 /* =========================
-   🎬 PLAYER
+   🎬 PLAYER (EDITÁVEL)
 ========================= */
 let videos = [];
 let index = 0;
 const player = document.getElementById("player");
 
 /* =========================
-   💾 CACHE INDEXEDDB
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO
 ========================= */
-const DB_NAME = "bee_videos";
-const STORE_NAME = "videos";
-
-function abrirDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE_NAME);
-    };
-
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = reject;
-  });
-}
-
-async function salvarVideo(url) {
-  try {
-    const db = await abrirDB();
-    const res = await fetch(url);
-    const blob = await res.blob();
-
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put(blob, url);
-  } catch (e) {
-    console.log("Erro ao salvar vídeo:", e);
-  }
-}
-
-async function pegarVideo(url) {
-  const db = await abrirDB();
-
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const req = tx.objectStore(STORE_NAME).get(url);
-
-    req.onsuccess = () => {
-      if (req.result) {
-        resolve(URL.createObjectURL(req.result));
-      } else {
-        resolve(null);
-      }
-    };
-  });
-}
-
-/* =========================
-   ▶️ CARREGAR VÍDEO
-========================= */
-async function carregarVideo() {
+function carregarVideo() {
   if (videos.length === 0) return;
 
+  // 🎬 INICIA FADE OUT
   player.classList.add("fade-out");
 
-  setTimeout(async () => {
+  setTimeout(() => {
+    player.src = videos[index];
+    player.play();
 
-    let local = await pegarVideo(videos[index]);
-
-    if (!local) {
-      await salvarVideo(videos[index]);
-      local = await pegarVideo(videos[index]);
-    }
-
-    player.src = local || videos[index];
-
-    player.play().catch(() => {
-      setTimeout(() => player.play(), 300);
-    });
-
+    // 🎬 VOLTA COM FADE IN
     player.classList.remove("fade-out");
-
-  }, 800);
+  }, 1000); // tempo igual ao transition do CSS
 
   player.onended = () => {
-    proximo();
+    index = (index + 1) % videos.length;
+    carregarVideo();
   };
-}
-
-function proximo() {
-  index = (index + 1) % videos.length;
-  carregarVideo();
 }
 
 carregarVideo();
 
 /* =========================
-   🔥 FIREBASE
+   🔥 FIREBASE (DEPOIS ATIVA)
 ========================= */
+
+// 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
-/* =========================
-   💾 CACHE LOCAL
-========================= */
-function salvarCache(lista) {
-  localStorage.setItem("videos_cache", JSON.stringify(lista));
-}
-
-function carregarCache() {
-  const cache = localStorage.getItem("videos_cache");
-  if (cache) {
-    videos = JSON.parse(cache);
-  }
-}
-
-carregarCache();
-
-/* =========================
-   🛡️ WATCHDOG
-========================= */
-let ultimoTempo = 0;
-
-setInterval(() => {
-  if (!player.paused) {
-    if (player.currentTime === ultimoTempo) {
-      console.log("Travou! Reiniciando...");
-      player.load();
-      player.play().catch(()=>{});
-    }
-    ultimoTempo = player.currentTime;
-  }
-}, 5000);
-
-/* =========================
-   📡 STATUS
-========================= */
-function enviarStatus() {
-  db.collection("devices").doc(deviceId).set({
-    online: true,
-    lastSeen: new Date().toISOString(),
-    videoAtual: videos[index] || null
-  }, { merge: true });
-}
-
-setInterval(enviarStatus, 10000);
-
-/* =========================
-   🔥 ANTI-TELA APAGAR (NOVO)
-========================= */
-setInterval(() => {
-  document.body.click();
-  console.log("Mantendo tela ativa...");
-}, 20000);
-
-/* =========================
-   🔥 PLAY INICIAL
-========================= */
-setTimeout(() => {
-  if (videos.length > 0) {
-    player.src = videos[0];
-    player.play().catch(() => {
-      setTimeout(() => player.play(), 500);
-    });
-  }
-}, 1000);
-
-/* =========================
-   🔥 FIREBASE REALTIME
-========================= */
+// 🔥 USA O ID DINÂMICO
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
 
-  if (data && data.status === "on") {
-    videos = data.videos || [];
-
-    salvarCache(videos);
-
+  if (data.status === "on") {
+    videos = data.videos;
     index = 0;
-
-    setTimeout(() => {
-      carregarVideo();
-    }, 1000);
+    carregarVideo();
   }
 });
+
 </script>
 
 </body>
