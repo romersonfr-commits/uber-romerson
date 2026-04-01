@@ -1,86 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Bee DOOH Player</title>
+
+  <!-- Firebase VERSÃO CORRETA -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+    }
+
+    video {
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+
+      /* 🎬 FADE SUAVE */
+      opacity: 1;
+      transition: opacity 1s ease-in-out;
+    }
+
+    /* 🔄 ESTADO DE FADE */
+    .fade-out {
+      opacity: 0;
+    }
+  </style>
+</head>
+
+<body>
+
+<video id="player" autoplay muted playsinline></video>
+
 <script>
+/* =========================
+   🔧 CONFIG FIREBASE (EDITÁVEL)
+========================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
+  authDomain: "bee-dooh.firebaseapp.com",
+  projectId: "bee-dooh",
+  storageBucket: "bee-dooh.firebasestorage.app",
+  messagingSenderId: "594686167676",
+  appId: "1:594686167676:web:77f7ee552c8ed1a4d997f9"
+};
 
 /* =========================
-   📍 LOCALIZAÇÃO DO DISPOSITIVO
+   🚀 INICIALIZA FIREBASE
 ========================= */
-let minhaLat = null;
-let minhaLng = null;
-
-navigator.geolocation.watchPosition(
-  (pos) => {
-    minhaLat = pos.coords.latitude;
-    minhaLng = pos.coords.longitude;
-  },
-  (err) => {
-    console.log("Erro GPS:", err);
-  },
-  { enableHighAccuracy: true }
-);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 /* =========================
-   📏 CALCULAR DISTÂNCIA (KM)
+   🎬 PLAYER (EDITÁVEL)
 ========================= */
-function calcularDistancia(lat1, lon1, lat2, lon2) {
-  const R = 6371; // raio da Terra
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
+let videos = [];
+let index = 0;
+const player = document.getElementById("player");
 
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+/* =========================
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+========================= */
+function carregarVideo() {
+  if (videos.length === 0) return;
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  // 🎬 INICIA FADE OUT
+  player.classList.add("fade-out");
+
+  setTimeout(() => {
+    player.src = videos[index];
+    player.play();
+
+    // 🎬 VOLTA COM FADE IN
+    player.classList.remove("fade-out");
+  }, 1000); // tempo igual ao transition do CSS
+
+  player.onended = () => {
+    index = (index + 1) % videos.length;
+    carregarVideo();
+  };
 }
 
+carregarVideo();
+
 /* =========================
-   🔥 FIREBASE COM GEOPONT
+   🔥 FIREBASE (DEPOIS ATIVA)
 ========================= */
+
+// 🔥 PEGA ID DA URL
+const urlParams = new URLSearchParams(window.location.search);
+const deviceId = urlParams.get("id") || "carro_01";
+
+// 🔥 USA O ID DINÂMICO
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
 
-  if (!data || data.status !== "on") return;
-  if (!data.videos) return;
-
-  if (minhaLat === null) {
-    console.log("Aguardando GPS...");
-    return;
-  }
-
-  // 🔥 FILTRA POR LOCALIZAÇÃO
-  const filtrados = data.videos.filter(v => {
-    if (!v.local || !v.raio) return false;
-
-    const lat = v.local.latitude;
-    const lng = v.local.longitude;
-
-    const distancia = calcularDistancia(minhaLat, minhaLng, lat, lng);
-
-    console.log("Distância:", distancia, "Raio:", v.raio);
-
-    return distancia <= v.raio;
-  });
-
-  // 🔥 EXTRAI SOMENTE AS URLs
-  const urls = filtrados.map(v => v.url);
-
-  if (urls.length === 0) {
-    console.log("Nenhum vídeo na região");
-    return;
-  }
-
-  videos = urls;
-
-  salvarCache(videos);
-
-  index = 0;
-
-  setTimeout(() => {
+  if (data.status === "on") {
+    videos = data.videos;
+    index = 0;
     carregarVideo();
-  }, 1000);
+  }
 });
 
 </script>
+
+</body>
+</html>
