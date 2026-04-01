@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Bee DOOH Player</title>
 
-  <!-- Firebase VERSÃO CORRETA -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -19,13 +19,10 @@
       width: 100vw;
       height: 100vh;
       object-fit: cover;
-
-      /* 🎬 FADE SUAVE */
       opacity: 1;
-      transition: opacity 1s ease-in-out;
+      transition: opacity 0.8s ease-in-out;
     }
 
-    /* 🔄 ESTADO DE FADE */
     .fade-out {
       opacity: 0;
     }
@@ -37,47 +34,175 @@
 <video id="player" autoplay muted playsinline></video>
 
 <script>
-/* =========================
-   🔧 CONFIG FIREBASE (EDITÁVEL)
-========================= */
-const firebaseConfig = {
-  apiKey: "AIzaSyCtxbIfvOdQadF0lu3D6yACjyIygVDK9dU",
-  authDomain: "bee-dooh.firebaseapp.com",
-  projectId: "bee-dooh",
-  storageBucket: "bee-dooh.firebasestorage.app",
-  messagingSenderId: "594686167676",
-  appId: "1:594686167676:web:77f7ee552c8ed1a4d997f9"
-};
 
 /* =========================
-   🚀 INICIALIZA FIREBASE
+   🔧 FIREBASE
 ========================= */
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "bee-dooh.firebaseapp.com",
+  projectId: "bee-dooh",
+};
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 /* =========================
-   🎬 PLAYER (EDITÁVEL)
+   🎬 PLAYER
 ========================= */
 let videos = [];
 let index = 0;
 const player = document.getElementById("player");
 
 /* =========================
-   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+   📍 GEOLOCALIZAÇÃO
 ========================= */
-function carregarVideo() {
+let posicaoAtual = null;
+
+function atualizarLocalizacao() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        posicaoAtual = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+        console.log("Localização:", posicaoAtual);
+      },
+      (err) => console.log("Erro GPS:", err),
+      { enableHighAccuracy: true }
+    );
+  }
+}
+
+setInterval(atualizarLocalizacao, 10000);
+atualizarLocalizacao();
+
+/* =========================
+   📏 DISTÂNCIA (KM)
+========================= */
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+/* =========================
+   🧠 FILTRO GEO (PRIORIDADE)
+========================= */
+function filtrarVideosPorProximidade(lista) {
+  if (!posicaoAtual) return lista;
+
+  let proximos = [];
+
+  lista.forEach(video => {
+    if (video.lat && video.lng && video.raio) {
+      const distancia = calcularDistancia(
+        posicaoAtual.lat,
+        posicaoAtual.lng,
+        video.lat,
+        video.lng
+      );
+
+      if (distancia <= video.raio) {
+        proximos.push(video);
+      }
+    }
+  });
+
+  if (proximos.length > 0) {
+    console.log("PRIORIDADE GEO ATIVADA");
+    return proximos;
+  }
+
+  return lista;
+}
+
+/* =========================
+   💾 CACHE (INDEXEDDB)
+========================= */
+const DB_NAME = "bee_videos";
+const STORE_NAME = "videos";
+
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE_NAME);
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = reject;
+  });
+}
+
+async function salvarVideo(url) {
+  try {
+    const db = await abrirDB();
+    const res = await fetch(url);
+    const blob = await res.blob();
+
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(blob, url);
+  } catch (e) {
+    console.log("Erro ao salvar vídeo:", e);
+  }
+}
+
+async function pegarVideo(url) {
+  const db = await abrirDB();
+
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).get(url);
+
+    req.onsuccess = () => {
+      if (req.result) {
+        resolve(URL.createObjectURL(req.result));
+      } else {
+        resolve(null);
+      }
+    };
+  });
+}
+
+/* =========================
+   ▶️ PLAYER COM GEO
+========================= */
+async function carregarVideo() {
   if (videos.length === 0) return;
 
-  // 🎬 INICIA FADE OUT
   player.classList.add("fade-out");
 
-  setTimeout(() => {
-    player.src = videos[index];
-    player.play();
+  setTimeout(async () => {
 
-    // 🎬 VOLTA COM FADE IN
+    let videoAtual = videos[index].url || videos[index];
+
+    let local = await pegarVideo(videoAtual);
+
+    if (!local) {
+      await salvarVideo(videoAtual);
+      local = await pegarVideo(videoAtual);
+    }
+
+    player.src = local || videoAtual;
+
+    player.play().catch(() => {
+      setTimeout(() => player.play(), 300);
+    });
+
     player.classList.remove("fade-out");
-  }, 1000); // tempo igual ao transition do CSS
+
+  }, 800);
 
   player.onended = () => {
     index = (index + 1) % videos.length;
@@ -88,22 +213,73 @@ function carregarVideo() {
 carregarVideo();
 
 /* =========================
-   🔥 FIREBASE (DEPOIS ATIVA)
+   🔥 FIREBASE
 ========================= */
-
-// 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
-// 🔥 USA O ID DINÂMICO
+/* =========================
+   💾 CACHE LOCAL
+========================= */
+function salvarCache(lista) {
+  localStorage.setItem("videos_cache", JSON.stringify(lista));
+}
+
+function carregarCache() {
+  const cache = localStorage.getItem("videos_cache");
+  if (cache) {
+    videos = JSON.parse(cache);
+  }
+}
+
+carregarCache();
+
+/* =========================
+   🛡️ WATCHDOG
+========================= */
+let ultimoTempo = 0;
+
+setInterval(() => {
+  if (!player.paused) {
+    if (player.currentTime === ultimoTempo) {
+      player.load();
+      player.play().catch(()=>{});
+    }
+    ultimoTempo = player.currentTime;
+  }
+}, 5000);
+
+/* =========================
+   📡 STATUS
+========================= */
+function enviarStatus() {
+  db.collection("devices").doc(deviceId).set({
+    online: true,
+    lastSeen: new Date().toISOString(),
+  }, { merge: true });
+}
+
+setInterval(enviarStatus, 10000);
+
+/* =========================
+   🔥 FIREBASE REALTIME
+========================= */
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
 
   if (data.status === "on") {
-    videos = data.videos;
+
+    // 🔥 AQUI ENTRA O FILTRO GEO
+    videos = filtrarVideosPorProximidade(data.videos);
+
+    salvarCache(videos);
+
     index = 0;
-    carregarVideo();
+
+    setTimeout(() => {
+      carregarVideo();
+    }, 1000);
   }
 });
 
