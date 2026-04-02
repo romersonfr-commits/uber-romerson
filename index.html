@@ -20,19 +20,62 @@
       height: 100vh;
       object-fit: cover;
 
-      /* 🎬 FADE SUAVE */
+      /* 🔥 FADE SEGURO */
       opacity: 1;
-      transition: opacity 1s ease-in-out;
+      transition: opacity 0.8s ease-in-out;
     }
 
-    /* 🔄 ESTADO DE FADE */
     .fade-out {
       opacity: 0;
     }
+
+    /* =========================
+       🆕 BARRA SUPERIOR (EDITÁVEL)
+    ========================= */
+    #top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 40px;
+
+      background: rgba(0, 0, 0, 0.5); /* 🔧 transparência */
+      color: #fff;
+
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+
+      display: flex;
+      align-items: center;
+
+      overflow: hidden;
+      z-index: 9999;
+    }
+
+    #ticker {
+      white-space: nowrap;
+      display: inline-block;
+      padding-left: 100%;
+
+      animation: scrollText 20s linear infinite;
+    }
+
+    @keyframes scrollText {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
   </style>
 </head>
 
 <body>
+
+<!-- =========================
+     🆕 BARRA SUPERIOR HTML
+========================= -->
+<div id="top-bar">
+  <div id="ticker">Carregando informações...</div>
+</div>
 
 <video id="player" autoplay muted playsinline></video>
 
@@ -63,21 +106,80 @@ let index = 0;
 const player = document.getElementById("player");
 
 /* =========================
-   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+   💾 CACHE REAL (INDEXEDDB)
 ========================= */
-function carregarVideo() {
+const DB_NAME = "bee_videos";
+const STORE_NAME = "videos";
+
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE_NAME);
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = reject;
+  });
+}
+
+async function salvarVideo(url) {
+  try {
+    const db = await abrirDB();
+    const res = await fetch(url);
+    const blob = await res.blob();
+
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(blob, url);
+  } catch (e) {
+    console.log("Erro ao salvar vídeo:", e);
+  }
+}
+
+async function pegarVideo(url) {
+  const db = await abrirDB();
+
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).get(url);
+
+    req.onsuccess = () => {
+      if (req.result) {
+        resolve(URL.createObjectURL(req.result));
+      } else {
+        resolve(null);
+      }
+    };
+  });
+}
+
+/* =========================
+   ▶️ FUNÇÃO DE CARREGAR VÍDEO (COM FADE + OFFLINE)
+========================= */
+async function carregarVideo() {
   if (videos.length === 0) return;
 
-  // 🎬 INICIA FADE OUT
   player.classList.add("fade-out");
 
-  setTimeout(() => {
-    player.src = videos[index];
-    player.play();
+  setTimeout(async () => {
 
-    // 🎬 VOLTA COM FADE IN
+    let local = await pegarVideo(videos[index]);
+
+    if (!local) {
+      await salvarVideo(videos[index]);
+      local = await pegarVideo(videos[index]);
+    }
+
+    player.src = local || videos[index];
+
+    player.play().catch(() => {
+      setTimeout(() => player.play(), 300);
+    });
+
     player.classList.remove("fade-out");
-  }, 1000); // tempo igual ao transition do CSS
+
+  }, 800);
 
   player.onended = () => {
     index = (index + 1) % videos.length;
@@ -88,24 +190,130 @@ function carregarVideo() {
 carregarVideo();
 
 /* =========================
-   🔥 FIREBASE (DEPOIS ATIVA)
+   🔥 FIREBASE
 ========================= */
 
-// 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
-// 🔥 USA O ID DINÂMICO
+/* =========================
+   💾 CACHE LOCAL (LISTA)
+========================= */
+function salvarCache(lista) {
+  localStorage.setItem("videos_cache", JSON.stringify(lista));
+}
+
+function carregarCache() {
+  const cache = localStorage.getItem("videos_cache");
+  if (cache) {
+    videos = JSON.parse(cache);
+  }
+}
+
+// 🔥 CARREGA CACHE PRIMEIRO
+carregarCache();
+
+/* =========================
+   🛡️ WATCHDOG (ANTI-TRAVAMENTO)
+========================= */
+let ultimoTempo = 0;
+
+setInterval(() => {
+  if (!player.paused) {
+    if (player.currentTime === ultimoTempo) {
+      console.log("Travou! Reiniciando...");
+      player.load();
+      player.play().catch(()=>{});
+    }
+    ultimoTempo = player.currentTime;
+  }
+}, 5000);
+
+/* =========================
+   📡 STATUS DO DISPOSITIVO
+========================= */
+function enviarStatus() {
+  db.collection("devices").doc(deviceId).set({
+    online: true,
+    lastSeen: new Date().toISOString(),
+    videoAtual: videos[index] || null
+  }, { merge: true });
+}
+
+setInterval(enviarStatus, 10000);
+
+// 🔥 PRIMEIRO PLAY FORÇADO (FULLY)
+setTimeout(() => {
+  if (videos.length > 0) {
+    player.src = videos[0];
+    player.play().catch(() => {
+      setTimeout(() => player.play(), 500);
+    });
+  }
+}, 1000);
+
+// 🔥 FIREBASE
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
 
   if (data.status === "on") {
     videos = data.videos;
+
+    salvarCache(videos);
+
     index = 0;
-    carregarVideo();
+
+    setTimeout(() => {
+      carregarVideo();
+    }, 1000);
   }
 });
+
+/* =========================
+   🆕 CLIMA + HORA + TEXTO (EDITÁVEL)
+========================= */
+
+const ticker = document.getElementById("ticker");
+
+// 🔧 ALTERE SUA CIDADE AQUI
+const cidade = "São Leopoldo";
+
+// 🔧 SUA CHAVE DA API (crie grátis em openweathermap.org)
+const apiKey = "SUA_API_KEY_AQUI";
+
+// 🔧 TEXTO PERSONALIZADO
+const mensagem = "📢 ANUNCIE AQUI WHATS (51) 9 8017-1851";
+
+async function atualizarClima() {
+  try {
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${cidade}&appid=${apiKey}&units=metric&lang=pt_br`);
+    const data = await res.json();
+
+    const temp = Math.round(data.main.temp);
+    const desc = data.weather[0].description;
+
+    return `🌤️ ${cidade}: ${temp}°C - ${desc}`;
+  } catch {
+    return "Clima indisponível";
+  }
+}
+
+function horaAtual() {
+  const agora = new Date();
+  return agora.toLocaleTimeString("pt-BR");
+}
+
+async function atualizarBarra() {
+  const clima = await atualizarClima();
+  const hora = horaAtual();
+
+  ticker.innerText = `${clima} | 🕒 ${hora} | ${mensagem} |`;
+}
+
+// 🔥 Atualiza a cada 10 segundos
+setInterval(atualizarBarra, 10000);
+atualizarBarra();
 
 </script>
 
