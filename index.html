@@ -29,10 +29,67 @@
     .fade-out {
       opacity: 0;
     }
+
+    /* =========================
+       🔝 BARRA SUPERIOR (NOVO)
+    ========================= */
+    #topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 30px;
+      background: rgba(0,0,0,0.50);
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 25px;
+      z-index: 10;
+    }
+
+    #logo {
+      font-size: 28px;
+      color: #FFD700;
+      margin-right: 30px;
+      font-weight: bold;
+    }
+
+    #marquee {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    #marquee span {
+      display: inline-block;
+      padding-left: 100%;
+      animation: scroll 23s linear infinite;
+      font-size: 28px;
+    }
+
+    @keyframes scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-100%); }
+    }
   </style>
 </head>
 
 <body>
+
+<!-- =========================
+     🔝 BARRA SUPERIOR (NOVO)
+========================= -->
+<div id="topbar">
+  <div id="logo">Bee Geo</div>
+
+  <!-- 👉 PARA USAR IMAGEM:
+  <img id="logo" src="https://seu-link/logo.png">
+  -->
+
+  <div id="marquee">
+    <span id="info"></span>
+  </div>
+</div>
 
 <video id="player" autoplay muted playsinline></video>
 
@@ -68,16 +125,13 @@ const player = document.getElementById("player");
 function carregarVideo() {
   if (videos.length === 0) return;
 
-  // 🎬 INICIA FADE OUT
   player.classList.add("fade-out");
 
   setTimeout(() => {
     player.src = videos[index];
     player.play();
-
-    // 🎬 VOLTA COM FADE IN
     player.classList.remove("fade-out");
-  }, 1000); // tempo igual ao transition do CSS
+  }, 1000);
 
   player.onended = () => {
     index = (index + 1) % videos.length;
@@ -88,14 +142,11 @@ function carregarVideo() {
 carregarVideo();
 
 /* =========================
-   🔥 FIREBASE (DEPOIS ATIVA)
+   🔥 FIREBASE
 ========================= */
-
-// 🔥 PEGA ID DA URL
 const urlParams = new URLSearchParams(window.location.search);
 const deviceId = urlParams.get("id") || "carro_01";
 
-// 🔥 USA O ID DINÂMICO
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
@@ -106,6 +157,49 @@ db.collection("devices").doc(deviceId)
     carregarVideo();
   }
 });
+
+/* =========================
+   🌦️ CLIMA (NOVO)
+========================= */
+let temperatura = "--";
+let climaIcone = "☀️";
+
+function buscarClima(){
+  fetch("https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&current_weather=true")
+    .then(res => res.json())
+    .then(data => {
+      temperatura = Math.round(data.current_weather.temperature);
+      let code = data.current_weather.weathercode;
+
+      if(code === 0) climaIcone = "☀️";
+      else if(code <= 3) climaIcone = "⛅";
+      else if(code <= 48) climaIcone = "☁️";
+      else if(code <= 67) climaIcone = "🌧️";
+      else if(code <= 77) climaIcone = "🌨️";
+      else climaIcone = "🌩️";
+    })
+    .catch(() => {});
+}
+
+buscarClima();
+setInterval(buscarClima, 600000);
+
+/* =========================
+   📅 TEXTO ROLANDO (NOVO)
+========================= */
+function atualizarInfo(){
+  let agora = new Date();
+
+  let hora = agora.toLocaleTimeString("pt-BR");
+  let diaSemana = agora.toLocaleDateString("pt-BR", { weekday: 'long' });
+  let data = agora.toLocaleDateString("pt-BR");
+
+  document.getElementById("info").innerText =
+    `São Leopoldo • ${temperatura}°C ${climaIcone} • ${diaSemana} • ${data} • ${hora} • Anuncie aqui (51) 9 8017-1851`;
+}
+
+setInterval(atualizarInfo, 5000);
+atualizarInfo();
 
 </script>
 
