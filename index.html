@@ -20,7 +20,8 @@
       height: 100vh;
       object-fit: cover;
 
-      /* 🎬 FADE SUAVE */
+      /* 🎬 FADE SUAVE
+         👉 Você pode alterar o tempo aqui (ex: 0.5s = mais rápido / 2s = mais suave) */
       opacity: 1;
       transition: opacity 1s ease-in-out;
     }
@@ -31,28 +32,45 @@
     }
 
     /* =========================
-       🔝 BARRA SUPERIOR (NOVO)
+       🔝 BARRA SUPERIOR
     ========================= */
     #topbar {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
+
+      /* 👉 ALTURA DA BARRA (pode aumentar se quiser mais destaque) */
       height: 30px;
+
+      /* 👉 TRANSPARÊNCIA (0.2 = mais transparente / 0.8 = mais escuro) */
       background: rgba(0,0,0,0.50);
+
       color: white;
       display: flex;
       align-items: center;
+
+      /* 👉 ESPAÇAMENTO INTERNO */
       padding: 0 25px;
+
       z-index: 10;
     }
 
     #logo {
+      /* 👉 TAMANHO DO TEXTO DO LOGO */
       font-size: 28px;
+
+      /* 👉 COR DO LOGO */
       color: #FFD700;
+
       margin-right: 30px;
       font-weight: bold;
     }
+
+    /* 👉 SE QUISER USAR IMAGEM:
+       substitua a DIV por IMG e use:
+       height: 60px;
+    */
 
     #marquee {
       flex: 1;
@@ -62,8 +80,13 @@
 
     #marquee span {
       display: inline-block;
+
+      /* 👉 DISTÂNCIA INICIAL DO TEXTO */
       padding-left: 100%;
+
+      /* 👉 VELOCIDADE DO TEXTO (quanto maior, mais lento) */
       animation: scroll 23s linear infinite;
+
       font-size: 28px;
     }
 
@@ -77,12 +100,14 @@
 <body>
 
 <!-- =========================
-     🔝 BARRA SUPERIOR (NOVO)
+     🔝 BARRA SUPERIOR
 ========================= -->
 <div id="topbar">
+
+  <!-- 👉 TEXTO DO LOGO (ALTERE AQUI) -->
   <div id="logo">Bee Geo</div>
 
-  <!-- 👉 PARA USAR IMAGEM:
+  <!-- 👉 PARA USAR LOGO EM IMAGEM:
   <img id="logo" src="https://seu-link/logo.png">
   -->
 
@@ -113,14 +138,14 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 /* =========================
-   🎬 PLAYER (EDITÁVEL)
+   🎬 PLAYER
 ========================= */
 let videos = [];
 let index = 0;
 const player = document.getElementById("player");
 
 /* =========================
-   ▶️ FUNÇÃO DE CARREGAR VÍDEO
+   ▶️ CARREGAR VÍDEO
 ========================= */
 function carregarVideo() {
   if (videos.length === 0) return;
@@ -145,59 +170,146 @@ carregarVideo();
    🔥 FIREBASE
 ========================= */
 const urlParams = new URLSearchParams(window.location.search);
+
+/* 👉 ID DO DISPOSITIVO
+   ✔ Pode ser passado via URL: ?id=carro_02
+   ✔ Se não passar, usa "carro_01"
+*/
 const deviceId = urlParams.get("id") || "carro_01";
+
+/* 👉 VARIÁVEL PARA ANÚNCIOS DA BARRA (NOVO) */
+let mensagensExtras = [];
+let msgIndex = 0;
 
 db.collection("devices").doc(deviceId)
 .onSnapshot((doc) => {
   const data = doc.data();
 
+  /* 🎬 CONTROLE DOS VÍDEOS */
   if (data.status === "on") {
     videos = data.videos;
     index = 0;
     carregarVideo();
   }
+
+  /* 💰 ANÚNCIOS NA BARRA (NOVO)
+     👉 CRIE NO FIREBASE:
+     topbarAds: ["Promoção!", "Oferta!", "Compre agora!"]
+  */
+  if (data.topbarAds) {
+    mensagensExtras = data.topbarAds;
+  }
 });
 
 /* =========================
-   🌦️ CLIMA (NOVO)
+   📍 GEOLOCALIZAÇÃO REAL (NOVO)
+========================= */
+let cidade = "Carregando...";
+let bairro = "";
+
+function buscarLocalizacao() {
+
+  /* 👉 NECESSÁRIO:
+     ✔ GPS ativado no tablet
+     ✔ Permissão de localização (Fully Kiosk)
+  */
+
+  if (navigator.geolocation) {
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+
+      let lat = pos.coords.latitude;
+      let lon = pos.coords.longitude;
+
+      try {
+        let res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+        let data = await res.json();
+
+        cidade = data.address.city || data.address.town || data.address.village || "Local";
+
+        /* 👉 BAIRRO (se existir) */
+        bairro = data.address.suburb || data.address.neighbourhood || "";
+
+      } catch(e) {
+        cidade = "Local";
+      }
+
+    });
+
+  }
+}
+
+/* 👉 ATUALIZA LOCALIZAÇÃO A CADA 5 MINUTOS */
+buscarLocalizacao();
+setInterval(buscarLocalizacao, 300000);
+
+/* =========================
+   🌦️ CLIMA DINÂMICO (NOVO)
 ========================= */
 let temperatura = "--";
 let climaIcone = "☀️";
 
 function buscarClima(){
-  fetch("https://api.open-meteo.com/v1/forecast?latitude=-29.76&longitude=-51.15&current_weather=true")
-    .then(res => res.json())
-    .then(data => {
-      temperatura = Math.round(data.current_weather.temperature);
-      let code = data.current_weather.weathercode;
 
-      if(code === 0) climaIcone = "☀️";
-      else if(code <= 3) climaIcone = "⛅";
-      else if(code <= 48) climaIcone = "☁️";
-      else if(code <= 67) climaIcone = "🌧️";
-      else if(code <= 77) climaIcone = "🌨️";
-      else climaIcone = "🌩️";
-    })
-    .catch(() => {});
+  if (!navigator.geolocation) return;
+
+  navigator.geolocation.getCurrentPosition((pos) => {
+
+    let lat = pos.coords.latitude;
+    let lon = pos.coords.longitude;
+
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+      .then(res => res.json())
+      .then(data => {
+
+        temperatura = Math.round(data.current_weather.temperature);
+
+        let code = data.current_weather.weathercode;
+
+        if(code === 0) climaIcone = "☀️";
+        else if(code <= 3) climaIcone = "⛅";
+        else if(code <= 48) climaIcone = "☁️";
+        else if(code <= 67) climaIcone = "🌧️";
+        else if(code <= 77) climaIcone = "🌨️";
+        else climaIcone = "🌩️";
+
+      });
+
+  });
+
 }
 
+/* 👉 ATUALIZA CLIMA A CADA 10 MINUTOS */
 buscarClima();
 setInterval(buscarClima, 600000);
 
 /* =========================
-   📅 TEXTO ROLANDO (NOVO)
+   📅 TEXTO ROLANDO
 ========================= */
 function atualizarInfo(){
+
   let agora = new Date();
 
   let hora = agora.toLocaleTimeString("pt-BR");
   let diaSemana = agora.toLocaleDateString("pt-BR", { weekday: 'long' });
   let data = agora.toLocaleDateString("pt-BR");
 
+  /* 💰 ROTACIONA ANÚNCIOS DA BARRA */
+  let anuncio = mensagensExtras.length > 0
+    ? mensagensExtras[msgIndex++ % mensagensExtras.length]
+    : "Anuncie aqui (51) 9 8017-1851"; /* 👉 CTA PADRÃO */
+
   document.getElementById("info").innerText =
-    `São Leopoldo • ${temperatura}°C ${climaIcone} • ${diaSemana} • ${data} • ${hora} • Anuncie aqui (51) 9 8017-1851`;
+    `${bairro ? bairro + " • " : ""}${cidade} • ${temperatura}°C ${climaIcone} • ${diaSemana} • ${data} • ${hora} • ${anuncio}`;
+
+  /* 👉 VOCÊ PODE ALTERAR:
+     ✔ telefone
+     ✔ texto padrão
+     ✔ ordem das informações
+  */
 }
 
+/* 👉 ATUALIZA A CADA 5 SEGUNDOS */
 setInterval(atualizarInfo, 5000);
 atualizarInfo();
 
